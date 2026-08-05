@@ -193,3 +193,64 @@ img{max-width:100%;display:block}
   .ls-toolbar{flex-direction:column}
   .ls-input{width:100%}
 }
+
+/* ===== SETTINGS TAB ===== */
+.ls-settings{max-width:700px;margin:0 auto}
+.ls-settings-section{background:#fff;border:1px solid #eee;border-radius:10px;padding:16px;margin-bottom:12px}
+.ls-settings-section h3{font-size:.92rem;font-weight:700;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #f0f0f0}
+.ls-settings-row{display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;font-size:.85rem;flex-wrap:wrap;gap:8px}
+.ls-settings-row:not(:last-child){border-bottom:1px solid #f8f8f8}
+.ls-settings-label{font-size:.85rem;min-width:120px}
+.ls-settings-desc{font-size:.78rem;color:#888;flex:1;text-align:right}
+.ls-settings-desc small{color:#aaa}
+
+/* Data cards */
+.ls-data-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px}
+.ls-data-card{background:#f9fafb;border-radius:8px;padding:12px 8px;text-align:center}
+.ls-data-num{display:block;font-size:1.3rem;font-weight:700;color:#1a1a1a}
+.ls-data-lbl{display:block;font-size:.72rem;color:#888;margin-top:2px}
+
+/* Audit log */
+.ls-settings-audit{margin-top:8px}
+.ls-settings-audit summary{cursor:pointer;font-size:.82rem;color:#666;padding:6px 0}
+.ls-settings-audit summary:hover{color:#333}
+.ls-audit-log{max-height:240px;overflow-y:auto;margin-top:8px;border:1px solid #eee;border-radius:6px}
+.ls-audit-entry{display:flex;gap:8px;padding:6px 10px;font-size:.76rem;border-bottom:1px solid #f5f5f5;flex-wrap:wrap}
+.ls-audit-entry:last-child{border-bottom:none}
+.ls-audit-time{color:#999;white-space:nowrap}
+.ls-audit-action{font-weight:600;color:#333}
+.ls-audit-detail{color:#666;flex:1;min-width:0;word-break:break-word}
+
+/* Backup buttons */
+.ls-backup-buttons{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+
+/* Categories */
+.ls-cat-list{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.ls-cat-item{display:flex;align-items:center;gap:8px;padding:6px 10px;background:#f9fafb;border-radius:6px;font-size:.82rem}
+.ls-cat-icon{font-size:1rem}
+.ls-cat-name{flex:1;font-weight:500}
+.ls-cat-count{font-size:.72rem;color:#aaa;background:#eee;border-radius:10px;padding:2px 8px}
+
+/* Units */
+.ls-units-list{display:flex;flex-wrap:wrap;gap:6px}
+.ls-unit-chip{background:#e3f2fd;color:#1565c0;border-radius:14px;padding:4px 14px;font-size:.78rem;font-weight:500}
+
+/* Locations */
+.ls-loc-list{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.ls-loc-item{display:flex;align-items:center;gap:8px;padding:6px 10px;background:#f9fafb;border-radius:6px;font-size:.82rem}
+.ls-loc-icon{font-size:1rem}
+.ls-loc-name{flex:1;font-weight:500}
+.ls-loc-temp{font-size:.76rem;color:#666;background:#e8f5e9;border-radius:10px;padding:2px 8px}
+
+/* Danger zone */
+.ls-danger-zone{border-color:#fecaca;background:#fff5f5}
+.ls-danger-zone h3{color:#dc2626;border-bottom-color:#fecaca}
+.ls-danger-buttons{display:flex;gap:8px}
+.ls-settings-desc small{color:#999}
+
+/* About */
+.ls-about{text-align:center;background:transparent;border:none}
+.ls-about h3{border:none;text-align:center}
+.ls-about-info{font-size:.82rem;color:#666;line-height:1.6}
+.ls-about-info b{color:#1a1a1a;font-size:.95rem}
+.ls-about-info small{color:#aaa;font-size:.72rem}

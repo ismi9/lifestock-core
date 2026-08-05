@@ -678,6 +678,182 @@ const App = (function () {
 
   // ===== SETTINGS TAB =====
 
+  function renderSettings() {
+    const sec = mod('Security');
+    const sync = mod('SyncManager');
+    const user = sec.getCurrentUser();
+    const role = sec.getRole();
+    const auditLog = sec.getAuditLog();
+    const syncStatus = sync.getStatus();
+    const cats = mod('ProductCore').getCategories();
+    const units = mod('ProductCore').getUnits();
+    const storage = mod('StorageManager');
+    const locations = storage.list();
+    const notifs = mod('NotificationCenter');
+
+    // Get inventory stats for data section
+    const inv = mod('InventoryEngine');
+    const stats = inv.getStats();
+    const products = mod('ProductCore').list();
+    const batches = mod('BatchManager').list();
+    const recipes = mod('RecipeEngine').list();
+
+    document.getElementById('panel-settings').innerHTML = `
+      <div class="ls-settings">
+
+        <!-- User / Role section -->
+        <div class="ls-settings-section">
+          <h3>👤 Користувач</h3>
+          <div class="ls-settings-row">
+            <div class="ls-settings-label">
+              <b>${user ? user.name : 'Гість'}</b><br>
+              <small>Роль: ${role === 'admin' ? 'Адміністратор' : role === 'manager' ? 'Менеджер' : 'Гість'}</small>
+            </div>
+            <div class="ls-settings-desc">У поточній версії користувач: <b>${user ? user.name : '—'}</b></div>
+          </div>
+          <div class="ls-settings-audit">
+            <details>
+              <summary>📋 Журнал дій (${auditLog.length})</summary>
+              <div class="ls-audit-log">
+                ${auditLog.length === 0 ? '<div class="ls-empty">Журнал порожній</div>' :
+                  auditLog.slice(-20).reverse().map(a => `
+                    <div class="ls-audit-entry">
+                      <span class="ls-audit-time">${new Date(a.timestamp).toLocaleString('uk-UA')}</span>
+                      <span class="ls-audit-action">${a.action}</span>
+                      <span class="ls-audit-detail">${a.detail || ''}</span>
+                    </div>
+                  `).join('')}
+                }
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <!-- Data overview -->
+        <div class="ls-settings-section">
+          <h3>📊 Дані системи</h3>
+          <div class="ls-data-grid">
+            <div class="ls-data-card">
+              <span class="ls-data-num">${products.length}</span>
+              <span class="ls-data-lbl">Товарів</span>
+            </div>
+            <div class="ls-data-card">
+              <span class="ls-data-num">${batches.length}</span>
+              <span class="ls-data-lbl">Партій</span>
+            </div>
+            <div class="ls-data-card">
+              <span class="ls-data-num">${recipes.length}</span>
+              <span class="ls-data-lbl">Рецептів</span>
+            </div>
+            <div class="ls-data-card">
+              <span class="ls-data-num">${locations.length}</span>
+              <span class="ls-data-lbl">Локацій</span>
+            </div>
+            <div class="ls-data-card">
+              <span class="ls-data-num">${notifs.list().length}</span>
+              <span class="ls-data-lbl">Сповіщень</span>
+            </div>
+            <div class="ls-data-card">
+              <span class="ls-data-num">${stats.totalValue.toFixed(2)}</span>
+              <span class="ls-data-lbl">₴ Вартість</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sync status -->
+        <div class="ls-settings-section">
+          <h3>🔄 Синхронізація</h3>
+          <div class="ls-settings-row">
+            <div class="ls-settings-label">
+              Статус: <b style="color:${syncStatus.online ? '#22c55e' : '#f59e0b'}">
+                ${syncStatus.online ? '🟢 Онлайн' : '🟡 Офлайн'}
+              </b>
+            </div>
+            <div class="ls-settings-desc">
+              ${syncStatus.lastSync ? 'Остання синхр.: ' + new Date(syncStatus.lastSync).toLocaleString('uk-UA') : 'Синхронізація не виконувалась'}
+            </div>
+          </div>
+          <button class="ls-btn-primary ls-btn-sm" onclick="App.syncNow()">🔄 Синхронізувати</button>
+        </div>
+
+        <!-- Backup / Export / Import -->
+        <div class="ls-settings-section">
+          <h3>💾 Резервне копіювання</h3>
+          <div class="ls-backup-buttons">
+            <button class="ls-btn-primary" onclick="App.exportData()">📥 Експорт даних (JSON)</button>
+            <label class="ls-btn-ghost" style="cursor:pointer">
+              📤 Імпорт даних
+              <input type="file" accept=".json" style="display:none" onchange="App.importData(this.files[0])" />
+            </label>
+          </div>
+          <div class="ls-settings-desc">
+            <small>Експорт зберігає всі дані (товари, партії, рецепти, локації) у JSON файл.</small>
+          </div>
+        </div>
+
+        <!-- Categories management -->
+        <div class="ls-settings-section">
+          <h3>🏷️ Категорії товарів</h3>
+          <div class="ls-cat-list">
+            ${cats.map(c => `
+              <div class="ls-cat-item">
+                <span class="ls-cat-icon">${c.icon}</span>
+                <span class="ls-cat-name">${c.name}</span>
+                <span class="ls-cat-count">${products.filter(p => p.categoryId === c.id).length} тов.</span>
+              </div>
+            `).join('')}
+          </div>
+          <button class="ls-btn-ghost ls-btn-sm" onclick="App.addCategory()">➕ Додати категорію</button>
+        </div>
+
+        <!-- Units list -->
+        <div class="ls-settings-section">
+          <h3>📏 Одиниці вимірювання</h3>
+          <div class="ls-units-list">
+            ${units.map(u => `<span class="ls-unit-chip">${u}</span>`).join('')}
+          </div>
+        </div>
+
+        <!-- Storage locations -->
+        <div class="ls-settings-section">
+          <h3>🏪 Локації зберігання</h3>
+          <div class="ls-loc-list">
+            ${locations.map(l => `
+              <div class="ls-loc-item">
+                <span class="ls-loc-icon">${l.icon}</span>
+                <span class="ls-loc-name">${l.name}</span>
+                <span class="ls-loc-temp">${l.temp !== null ? l.temp + '°C' : '—'}</span>
+              </div>
+            `).join('')}
+          </div>
+          <button class="ls-btn-ghost ls-btn-sm" onclick="App.addStorageLocation()">➕ Додати локацію</button>
+        </div>
+
+        <!-- Danger zone -->
+        <div class="ls-settings-section ls-danger-zone">
+          <h3>⚠️ Небезпечна зона</h3>
+          <div class="ls-danger-buttons">
+            <button class="ls-btn-danger" onclick="App.clearAllData()">🗑️ Очистити всі дані</button>
+          </div>
+          <div class="ls-settings-desc">
+            <small>Видалить усі товари, партії, рецепти та налаштування. Дію не можна скасувати.</small>
+          </div>
+        </div>
+
+        <!-- About -->
+        <div class="ls-settings-section ls-about">
+          <h3>ℹ️ Про програму</h3>
+          <div class="ls-about-info">
+            <b>LifeStock Core</b> v1.0<br>
+            Офлайн-система управління запасами<br>
+            <small>10 модулів · Працює без інтернету · Дані у вашому браузері</small>
+          </div>
+        </div>
+
+      </div>
+    `;
+  }
+
   // ===== ACTIONS =====
   function addProduct() {
     const name = prompt('Назва товару:');
@@ -831,6 +1007,36 @@ const App = (function () {
     toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
   }
 
+  function addCategory() {
+    const name = prompt('Назва категорії:');
+    if (!name) return;
+    const icon = prompt('Іконка (emoji):', '📦') || '📦';
+    mod('ProductCore').addCategory(name, icon);
+    mod('Security').log('add-category', 'Додано категорію: ' + name);
+    App.toast('✅ Категорію додано', 'ok');
+    renderSettings();
+  }
+
+  function addStorageLocation() {
+    const name = prompt('Назва локації:');
+    if (!name) return;
+    const icon = prompt('Іконка (emoji):', '📦') || '📦';
+    const tempStr = prompt('Температура (°C, порожньо якщо не потрібно):', '');
+    const temp = tempStr !== '' ? parseFloat(tempStr) : null;
+    mod('StorageManager').add({ name, icon, temp: temp });
+    mod('Security').log('add-storage', 'Додано локацію: ' + name);
+    App.toast('✅ Локацію додано', 'ok');
+    renderSettings();
+  }
+
+  function clearAllData() {
+    if (!confirm('⚠️ УВага! Це видалить ВСІ дані (товари, партії, рецепти). Продовжити?')) return;
+    if (!confirm('Останнє підтвердження. Дію НЕ можна скасувати. Видалити все?')) return;
+    LifeStock.store.clear();
+    App.toast('🗑️ Усі дані видалено', 'warn');
+    setTimeout(() => location.reload(), 1000);
+  }
+
   function bindEvents() {
     // Auto-refresh on data changes
     LifeStock.on('product:added', () => refreshAll());
@@ -843,8 +1049,9 @@ const App = (function () {
   }
 
   return { init, addProduct, addProductWithBarcode, addBatch, addRecipe, addStorage,
-    doScan, randomScan, toggleCamera, switchScanMode, runOCR, useOCRDate, toggleAI, markRead, markAllRead, clearAlerts, syncNow, 
-    switchUser, exportData, importData, resetData, toast };
+    doScan, randomScan, toggleCamera, switchScanMode, runOCR, useOCRDate, toggleAI, markRead, markAllRead, clearAlerts, syncNow,
+    switchUser, exportData, importData, resetData, toast,
+    renderSettings, addCategory, addStorageLocation, clearAllData };
 })();
 
 // Bootstrap after all scripts loaded
