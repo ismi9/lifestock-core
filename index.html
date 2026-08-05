@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LifeStock Ядро 1.0 — 10 модулів управління запасами</title>
+    <meta name="description" content="LifeStock Ядро 1.0 — відкрита платформа управління запасами: продукти, партії, інвентар, зберігання, штрихкоди, камера, рецепти, сповіщення, безпека, синхронізація.">
+    <link rel="icon" href="favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<header class="header" id="top">
+    <div class="container header-inner">
+        <a href="#top" class="logo">
+            <span class="logo-mark">📦</span> Life<span class="logo-accent">Stock</span>
+        </a>
+        <nav class="nav" id="nav">
+            <a href="#core" class="nav-link">Ядро</a>
+            <a href="#modules" class="nav-link">Модулі</a>
+            <a href="#contact" class="nav-link nav-demo">Контакти</a>
+        </nav>
+        <button class="nav-toggle" id="navToggle" aria-label="Меню">
+            <span></span><span></span><span></span>
+        </button>
+    </div>
+</header>
+
+<!-- ===== HERO ===== -->
+<section class="hero" id="hero">
+    <div class="container">
+        <div class="hero-badge">⚪ Версія 1.0 · Стабільне ядро</div>
+        <h1 class="hero-title">10 модулів.<br>Один сервіс.</h1>
+        <p class="hero-sub">LifeStock — платформа для управління запасами, термінами придатності та закупівлями. Ядро 1.0 працює офлайн, без реєстрації, без хмарних залежностей.</p>
+        <div class="hero-actions">
+            <a href="#modules" class="btn-primary">Оглянути модулі</a>
+            <a href="#contact" class="btn-ghost">Контакти</a>
+        </div>
+        <div class="hero-stats">
+            <div class="hero-stat"><span class="hero-stat-num">10</span><span class="hero-stat-label">модулів</span></div>
+            <div class="hero-stat"><span class="hero-stat-num">0</span><span class="hero-stat-label">залежностей</span></div>
+            <div class="hero-stat"><span class="hero-stat-num">100%</span><span class="hero-stat-label">офлайн</span></div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== CORE PRINCIPLES ===== -->
+<section class="principles-section" id="core">
+    <div class="container">
+        <div class="section-head">
+            <span class="section-tag">Принципи ядра</span>
+            <h2>Простота понад усе</h2>
+            <p class="section-sub">Ядро 1.0 побудовано на трьох принципах: автономність, передбачуваність, розширюваність.</p>
+        </div>
+        <div class="principles-grid">
+            <div class="principle-card">
+                <span class="principle-icon">🔋</span>
+                <h4>Автономність</h4>
+                <p>Усі 10 модулів працюють без інтернету. Дані зберігаються локально в браузері.</p>
+            </div>
+            <div class="principle-card">
+                <span class="principle-icon">📐</span>
+                <h4>Передбачуваність</h4>
+                <p>Кожен модуль має стабільний API версії 1.0. Жодних прихованих залежностей.</p>
+            </div>
+            <div class="principle-card">
+                <span class="principle-icon">🧩</span>
+                <h4>Розширюваність</h4>
+                <p>Ядро не залежить від розширень. Розширення підключаються за потреби.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== MODULES ===== -->
+<section class="modules-section" id="modules">
+    <div class="container">
+        <div class="section-head">
+            <span class="section-tag">10 модулів · Версія 1.0</span>
+            <h2>Ядро платформи</h2>
+            <p class="section-sub">Кожен модуль — самостійна одиниця зі стабільним API. Модулі не залежать одне від одного, крім явних зв'язків.</p>
+        </div>
+        <div class="modules-grid">
+            <div class="module-card">
+                <div class="module-num">01</div>
+                <span class="module-icon">📦</span>
+                <h3>Product Core</h3>
+                <p>Базові дані товарів: назва, категорія, одиниця виміру, виробник, ціна. Основа для всіх інших модулів.</p>
+                <ul class="module-api">
+                    <li><code>create(data)</code> — додати товар</li>
+                    <li><code>get(id)</code> — отримати товар</li>
+                    <li><code>list(filter)</code> — список товарів</li>
+                    <li><code>update(id, data)</code> — оновити</li>
+                    <li><code>delete(id)</code> — видалити</li>
+                </ul>
+            </div>
+            <div class="module-card">
+                <div class="module-num">02</div>
+                <span class="module-icon">🏭</span>
+                <h3>Batch Manager</h3>
+                <p>Партії товарів: номер, дата виробництва, термін придатності, залишок. Відстеження терміну придатності.</p>
+                <ul class="module-api">
+                    <li><code>createBatch(productId, data)</code></li>
+                    <li><code>get(id)</code> — партія</li>
+                    <li><code>list(filter)</code> — партії</li>
+                    <li><code>updateRemaining(id, qty)</code></li>
+                    <li><code>daysUntilExpiry(id)</code></li>
+                </ul>
+            </div>
+            <div class="module-card">
+                <div class="module-num">03</div>
+                <span class="module-icon">📊</span>
+                <h3>Inventory Engine</h3>
+                <p>Розрахунок залишків на основі партій. Мінімальні запаси, пороги поповнення, автоматичні позначки low-stock.</p>
+                <ul class="module-api">
+                    <li><code>getStock(productId)</code></li>
+                    <li><code>getAllStock()</code> — всі залишки</li>
+                    <li><code>setMinStock(productId, qty)</code></li>
+                    <li><code>getLowStock()</code> — дефіцит</li>
+                </ul>
+            </div>
+            <div class="module-card">
+                <div class="module-num">04</div>
+                <span class="module-icon">🗄️</span>
+                <h3>Storage Manager</h3>
+                <p>Локації зберігання: полиця, морозильник, комора. Температурні зони. Закріплення товарів за локаціями.</p>
+                <ul class="module-api">
+                    <li><code>createLocation(data)</code></li>
+                    <li><code>assign(productId, locationId)</code></li>
+                    <li><code>getLocation(id)</code></li>
+                    <li><code>listLocations()</code></li>
+                </ul>
+            </div>
+            <div class="module-card">
+                <div class="module-num">05</div>
+                <span class="module-icon">📷</span>
+                <h3>Barcode Registry</h3>
+                <p>Реєстр штрихкодів: EAN-13, UPC-A, QR. Локальна база + пошук через OpenFoodFacts API (за наявності інтернету).</p>
+                <ul class="module-api">
+                    <li><code>lookup(code)</code> — знайти товар</li>
+                    <li><code>register(code, productId)</code></li>
+                    <li><code>scan()</code> — сканувати камерою</li>
+                    <li><code>getByProduct(productId)</code></li>
+                </ul>
+            </div>
+            <div class="module-card">
+                <div class="module-num">06</div>
+                <span class="module-icon">🎥</span>
+                <h3>Camera AI</h3>
+                <p>Сканування штрихкодів і текстів через камеру. Подвійний рушій: BarcodeDetector API + QuaggaJS. OCR через Tesseract.js.</p>
+                <ul class="module-api">
+                    <li><code>startScan(mode)</code></li>
+                    <li><code>stopScan()</code></li>
+                    <li><code>capturePhoto()</code></li>
+                    <li><code>extractText(image)</code></li>
+                </ul>
+            </div>
+            <div class="module-card">
+                <div class="module-num">07</div>
+                <span class="module-icon">🍳</span>
+                <h3>Recipe Engine</h3>
+                <p>Рецепти: інгредієнти, кількості, кроки. Підрахунок доступності на основі інвентарю. Чек-лист продуктів.</p>
+                <ul class="module-api">
+                    <li><code>create(data)</code> — рецепт</li>
+                    <li><code>checkAvailability(recipeId)</code></li>
+                    <li><code>list(filter)</code> — рецепти</li>
+                    <li><code>getShoppingItems(recipeId)</code></li>
+                </ul>
+            </div>
+            <div class="module-card">
+                <div class="module-num">08</div>
+                <span class="module-icon">🔔</span>
+                <h3>Notification Center</h3>
+                <p>Сповіщення: закінчення терміну, low-stock, нагадування. In-app алерти. Без зовнішніх push-серверів.</p>
+                <ul class="module-api">
+                    <li><code>add(type, message)</code></li>
+                    <li><code>list(filter)</code> — сповіщення</li>
+                    <li><code>markRead(id)</code></li>
+                    <li><code>markAllRead()</code></li>
+                </ul>
+            </div>
+            <div class="module-card">
+                <div class="module-num">09</div>
+                <span class="module-icon">🔒</span>
+                <h3>Security</h3>
+                <p>Ролі: admin, user, viewer. Права доступу на модулі. Локальна автентифікація. Дані користувача не залишають пристрій.</p>
+                <ul class="module-api">
+                    <li><code>login(credentials)</code></li>
+                    <li><code>can(action)</code> — перевірка права</li>
+                    <li><code>getRole()</code></li>
+                    <li><code>logout()</code></li>
+                </ul>
+            </div>
+            <div class="module-card">
+                <div class="module-num">10</div>
+                <span class="module-icon">🔄</span>
+                <h3>Synchronization</h3>
+                <p>Синхронізація між пристроями через localStorage + optional cloud. Офлайн-режим за замовчуванням. Конфлікти вирішуються за timestamp.</p>
+                <ul class="module-api">
+                    <li><code>sync()</code> — запустити</li>
+                    <li><code>getStatus()</code> — статус</li>
+                    <li><code>export()</code> — експорт даних</li>
+                    <li><code>import(data)</code> — імпорт</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== CONTACT ===== -->
+<section class="contact-section" id="contact">
+    <div class="container">
+        <div class="section-head">
+            <span class="section-tag">Контакти</span>
+            <h2>Зв'язок</h2>
+            <p class="section-sub">Питання, пропозиції, співпраця.</p>
+        </div>
+        <div class="contact-grid">
+            <div class="contact-card">
+                <span class="contact-icon">🐙</span>
+                <h4>GitHub</h4>
+                <p>Відкритий код та документація</p>
+                <a href="https://github.com/ismi9/lifestock-core" class="contact-link">github.com/ismi9/lifestock-core</a>
+            </div>
+            <div class="contact-card">
+                <span class="contact-icon">💬</span>
+                <h4>Telegram</h4>
+                <p>Швидкі питання та обговорення</p>
+                <a href="https://t.me/ismi9" class="contact-link">@ismi9</a>
+            </div>
+            <div class="contact-card">
+                <span class="contact-icon">✉️</span>
+                <h4>Email</h4>
+                <p>Ділові запити</p>
+                <a href="mailto:ismi9@users.noreply.github.com" class="contact-link">ismi9@github.com</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer class="footer">
+    <div class="container">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <span class="logo-mark">📦</span> Life<span class="logo-accent">Stock</span>
+                <span class="footer-version">Ядро 1.0</span>
+            </div>
+            <div class="footer-links">
+                <a href="#core">Принципи</a>
+                <a href="#modules">Модулі</a>
+                <a href="#contact">Контакти</a>
+            </div>
+        </div>
+        <div class="footer-copy">© 2026 LifeStock · MIT License</div>
+    </div>
+</footer>
+
+<script src="js/app.js"></script>
+</body>
+</html>
