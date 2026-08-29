@@ -43,6 +43,15 @@ Guides for crafting effective AI prompts in LifeStock AI integrations:
 4. `guides/prompts-adversarial.md` — prompt injection, jailbreaks, defense
 5. `notebooks/` — 12 Jupyter notebooks with working examples
 
+## Browser Automation
+
+Path: `.playwright-mcp/` — Microsoft Playwright MCP server (69 tools).
+Official MCP server for browser automation via Model Context Protocol.
+1. `MCP-SETUP.md` — installation, config, and tool reference
+2. `README.md` — full documentation with all 69 tools
+3. `cli.js` / `index.js` — server entry points
+4. Use for: E2E testing, supplier scraping, visual regression, form automation
+
 ## Project Rules
 
 - Core does NOT depend on AI — all critical functions work offline
