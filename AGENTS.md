@@ -22,6 +22,16 @@ Key skills for this project:
 4. `.taste-skill/redesign-skill/SKILL.md` — redesign existing UI
 5. `.taste-skill/output-skill/SKILL.md` — prevent LLM code truncation
 
+## Prompt Engineering
+
+Path: `.prompt-engineering-guide/` — DAIR.AI prompt engineering reference.
+Guides for crafting effective AI prompts in LifeStock AI integrations:
+1. `guides/prompts-basic-usage.md` — summarization, classification, code gen, reasoning
+2. `guides/prompts-advanced-usage.md` — CoT, Few-Shot, ToT, RAG, ReAct, PAL
+3. `guides/prompts-reliability.md` — hallucinations, factuality, robustness
+4. `guides/prompts-adversarial.md` — prompt injection, jailbreaks, defense
+5. `notebooks/` — 12 Jupyter notebooks with working examples
+
 ## Project Rules
 
 - Core does NOT depend on AI — all critical functions work offline
