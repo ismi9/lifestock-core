@@ -2,7 +2,7 @@
 
 ## Design Quality
 
-This project uses two taste-skill libraries:
+This project uses three design libraries:
 
 ### Taste-Skills (Dragoon0x) — Design Judgment
 Path: `.taste-skills/` — 39 skills for evaluating design quality.
@@ -21,6 +21,17 @@ Key skills for this project:
 3. `.taste-skill/soft-skill/SKILL.md` — premium agency-level design
 4. `.taste-skill/redesign-skill/SKILL.md` — redesign existing UI
 5. `.taste-skill/output-skill/SKILL.md` — prevent LLM code truncation
+
+### Awesome DESIGN.md (VoltAgent) — Brand Design Systems
+Path: `.awesome-design-md/design-md/` — 74 DESIGN.md files from real-world brands.
+Each file contains complete design systems (colors, typography, spacing) ready for AI agents.
+Recommended for LifeStock UI generation:
+1. `design-md/linear.app/DESIGN.md` — clean dark product UI
+2. `design-md/stripe/DESIGN.md` — financial infrastructure aesthetic
+3. `design-md/notion/DESIGN.md` — editorial document UI
+4. `design-md/raycast/DESIGN.md` — developer tool aesthetic
+5. `design-md/supabase/DESIGN.md` — modern developer platform
+Usage: Copy a DESIGN.md to project root, tell agent "build a page that looks like this"
 
 ## Prompt Engineering
 
