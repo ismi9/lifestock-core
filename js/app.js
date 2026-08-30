@@ -1,10 +1,9 @@
 /**
- * LifeStock App Controller — renders working UI for all 10 core modules
- * This is the dashboard that ties everything together.
+ * LifeStock App Controller v1.1 — renders UI for all core modules
+ * Includes: Shopping List, Help/Onboarding, enhanced UI
  */
 const App = (function () {
   function init() {
-    // Modules auto-init on register. Now build the UI.
     buildDashboard();
     bindEvents();
     refreshAll();
@@ -16,36 +15,33 @@ const App = (function () {
     const container = document.getElementById('lifestock-app');
     if (!container) return;
     container.innerHTML = `
-      <!-- Dashboard header -->
       <div class="ls-dashboard-header">
         <div class="ls-stats" id="lsStats"></div>
         <div class="ls-sync-bar" id="lsSyncBar"></div>
       </div>
-
-      <!-- Tab navigation -->
       <div class="ls-tabs">
         <button class="ls-tab active" data-tab="inventory">📦 Запаси</button>
         <button class="ls-tab" data-tab="scan">📷 Сканер</button>
         <button class="ls-tab" data-tab="batches">📊 Партії</button>
         <button class="ls-tab" data-tab="recipes">🧾 Рецепти</button>
+        <button class="ls-tab" data-tab="shopping">🛒 Покупки</button>
         <button class="ls-tab" data-tab="storage">🏬 Склади</button>
         <button class="ls-tab" data-tab="alerts">🔔 Сповіщення</button>
+        <button class="ls-tab" data-tab="help">💡 Допомога</button>
         <button class="ls-tab" data-tab="settings">⚙️ Налаштування</button>
       </div>
-
-      <!-- Tab panels -->
       <div class="ls-panels">
         <div class="ls-panel active" id="panel-inventory"></div>
         <div class="ls-panel" id="panel-scan"></div>
         <div class="ls-panel" id="panel-batches"></div>
         <div class="ls-panel" id="panel-recipes"></div>
+        <div class="ls-panel" id="panel-shopping"></div>
         <div class="ls-panel" id="panel-storage"></div>
         <div class="ls-panel" id="panel-alerts"></div>
+        <div class="ls-panel" id="panel-help"></div>
         <div class="ls-panel" id="panel-settings"></div>
       </div>
     `;
-
-    // Bind tab switching
     document.querySelectorAll('.ls-tab').forEach(tab => {
       tab.addEventListener('click', () => {
         document.querySelectorAll('.ls-tab').forEach(t => t.classList.remove('active'));
@@ -66,10 +62,12 @@ const App = (function () {
 
   function renderStats() {
     const stats = mod('InventoryEngine').getStats();
+    const shopStats = mod('ShoppingList').getStats();
     document.getElementById('lsStats').innerHTML = `
       <div class="ls-stat"><span class="ls-stat-icon">📦</span><span class="ls-stat-val">${stats.totalProducts}</span><span class="ls-stat-lbl">Товарів</span></div>
       <div class="ls-stat ls-stat-warn"><span class="ls-stat-icon">📉</span><span class="ls-stat-val">${stats.lowStock}</span><span class="ls-stat-lbl">Низький залишок</span></div>
       <div class="ls-stat ls-stat-crit"><span class="ls-stat-icon">⏳</span><span class="ls-stat-val">${stats.expiringBatches}</span><span class="ls-stat-lbl">Термін ≤3 дн.</span></div>
+      <div class="ls-stat"><span class="ls-stat-icon">🛒</span><span class="ls-stat-val">${shopStats.remaining}</span><span class="ls-stat-lbl">У списку покупок</span></div>
       <div class="ls-stat"><span class="ls-stat-icon">💰</span><span class="ls-stat-val">${stats.totalValue.toFixed(0)} ₴</span><span class="ls-stat-lbl">Вартість</span></div>
     `;
   }
@@ -94,8 +92,10 @@ const App = (function () {
       case 'scan': renderScan(); break;
       case 'batches': renderBatches(); break;
       case 'recipes': renderRecipes(); break;
+      case 'shopping': renderShopping(); break;
       case 'storage': renderStorage(); break;
       case 'alerts': renderAlerts(); break;
+      case 'help': renderHelp(); break;
       case 'settings': renderSettings(); break;
     }
   }
@@ -105,7 +105,6 @@ const App = (function () {
     const items = mod('InventoryEngine').getAllStock();
     const cats = mod('ProductCore').getCategories();
     const can = mod('Security').can('add');
-
     let html = `
       <div class="ls-toolbar">
         <input type="text" id="invSearch" placeholder="🔍 Пошук товару..." class="ls-input">
@@ -119,7 +118,6 @@ const App = (function () {
           <thead><tr><th></th><th>Товар</th><th>Категорія</th><th>Залишок</th><th>Мін.</th><th>Ціна</th><th>Статус</th><th></th></tr></thead>
           <tbody id="invBody">
     `;
-
     items.forEach(item => {
       const cat = cats.find(c => c.id === item.categoryId) || { icon: '📦', name: 'Інше' };
       const status = item.low ? '<span class="ls-badge ls-badge-warn">📉 Низький</span>' :
@@ -133,13 +131,12 @@ const App = (function () {
         <td>${item.minStock} ${item.unit}</td>
         <td>${item.price.toFixed(2)} ₴</td>
         <td>${status}</td>
-        <td><button class="ls-btn-icon" onclick="App.addBatch('${item.productId}')" title="Додати партію">📦</button></td>
+        <td><button class="ls-btn-icon" onclick="App.addBatch('${item.productId}')" title="Додати партію">📦</button>
+            <button class="ls-btn-icon" onclick="App.addToShopping('${item.productId}')" title="В список покупок">🛒</button></td>
       </tr>`;
     });
-
     html += `</tbody></table></div>`;
     document.getElementById('panel-inventory').innerHTML = html;
-
     document.getElementById('invSearch')?.addEventListener('input', () => filterInventory());
     document.getElementById('invCatFilter')?.addEventListener('change', () => filterInventory());
   }
@@ -170,13 +167,181 @@ const App = (function () {
         <td>${item.minStock} ${item.unit}</td>
         <td>${item.price.toFixed(2)} ₴</td>
         <td>${status}</td>
-        <td><button class="ls-btn-icon" onclick="App.addBatch('${item.productId}')" title="Додати партію">📦</button></td>
+        <td><button class="ls-btn-icon" onclick="App.addBatch('${item.productId}')">📦</button>
+            <button class="ls-btn-icon" onclick="App.addToShopping('${item.productId}')">🛒</button></td>
       </tr>`;
     }).join('');
   }
 
+  // ===== SHOPPING TAB =====
+  function renderShopping() {
+    const list = mod('ShoppingList').getActive();
+    const stats = mod('ShoppingList').getStats();
+    const allLists = mod('ShoppingList').getAll();
+    const recipes = LifeStock.store.get('recipes', []);
+
+    let html = `
+      <div class="ls-toolbar">
+        <select id="shopListSelect" class="ls-select" onchange="App.switchList(this.value)">
+          ${allLists.map(l => `<option value="${l.id}" ${l.id === mod('ShoppingList').getActiveId() ? 'selected' : ''}>${l.icon} ${l.name}</option>`).join('')}
+        </select>
+        <button class="ls-btn-primary" onclick="App.newList()">➕ Новий список</button>
+        <button class="ls-btn-ghost" onclick="App.genFromLowStock()">📊 З низького залишку</button>
+        ${recipes.length > 0 ? `<select id="shopRecipeSelect" class="ls-select"><option value="">З рецепта...</option>${recipes.map(r => `<option value="${r.id}">${r.icon} ${r.name}</option>`).join('')}</select><button class="ls-btn-ghost" onclick="App.genFromRecipe()">🧾 Генерувати</button>` : ''}
+      </div>
+    `;
+
+    if (!list || list.items.length === 0) {
+      html += `<div class="ls-empty"><span class="ls-empty-icon">🛒</span><p>Список покупок порожній</p><p class="ls-empty-hint">Додайте товари вручну або згенеруйте з низького залишку</p></div>`;
+    } else {
+      html += `
+        <div class="ls-shop-progress">
+          <div class="ls-shop-progress-bar"><div class="ls-shop-progress-fill" style="width:${stats.total ? (stats.checked/stats.total*100) : 0}%"></div></div>
+          <span>${stats.checked} / ${stats.total} куплено</span>
+        </div>
+        <div class="ls-shop-list">
+      `;
+      list.items.forEach(item => {
+        html += `
+          <div class="ls-shop-item ${item.checked ? 'checked' : ''}">
+            <label class="ls-shop-check">
+              <input type="checkbox" ${item.checked ? 'checked' : ''} onchange="App.toggleShopItem('${item.productId}')">
+              <span class="ls-shop-checkmark"></span>
+            </label>
+            <span class="ls-shop-icon">${item.icon}</span>
+            <div class="ls-shop-info">
+              <span class="ls-shop-name ${item.checked ? 'done' : ''}">${item.name}</span>
+              ${item.note ? `<span class="ls-shop-note">${item.note}</span>` : ''}
+            </div>
+            <span class="ls-shop-qty">${item.qty} ${item.unit}</span>
+            <button class="ls-btn-icon ls-shop-remove" onclick="App.removeShopItem('${item.productId}')">✕</button>
+          </div>
+        `;
+      });
+      html += `</div>`;
+      if (stats.checked > 0) {
+        html += `<button class="ls-btn-ghost ls-shop-clear" onclick="App.clearCheckedItems()">🧹 Очистити куплені</button>`;
+      }
+    }
+    document.getElementById('panel-shopping').innerHTML = html;
+  }
+
+  // ===== HELP TAB =====
+  function renderHelp() {
+    document.getElementById('panel-help').innerHTML = `
+      <div class="ls-help-grid">
+        <div class="ls-help-card" onclick="App.showHelpTopic('expiry')">
+          <span class="ls-help-icon">⏳</span>
+          <h4>Терміни придатності</h4>
+          <p>Як сортувати та відстежувати</p>
+        </div>
+        <div class="ls-help-card" onclick="App.showHelpTopic('scanner')">
+          <span class="ls-help-icon">📷</span>
+          <h4>Сканер штрихкодів</h4>
+          <p>Як сканувати товари</p>
+        </div>
+        <div class="ls-help-card" onclick="App.showHelpTopic('shopping')">
+          <span class="ls-help-icon">🛒</span>
+          <h4>Список покупок</h4>
+          <p>Автогенерація та ручне додавання</p>
+        </div>
+        <div class="ls-help-card" onclick="App.showHelpTopic('recipes')">
+          <span class="ls-help-icon">🧾</span>
+          <h4>Рецепти</h4>
+          <p>Планування та інгредієнти</p>
+        </div>
+        <div class="ls-help-card" onclick="App.showHelpTopic('sync')">
+          <span class="ls-help-icon">🔄</span>
+          <h4>Синхронізація</h4>
+          <p>Офлайн-режим та експорт</p>
+        </div>
+        <div class="ls-help-card" onclick="App.showHelpTopic('security')">
+          <span class="ls-help-icon">🔐</span>
+          <h4>Ролі та доступ</h4>
+          <p>Користувачі та права</p>
+        </div>
+      </div>
+      <div id="lsHelpContent" class="ls-help-content"></div>
+    `;
+  }
+
+  function showHelpTopic(topic) {
+    const topics = {
+      expiry: {
+        title: '⏳ Терміни придатності',
+        body: `
+          <p><b>Принцип:</b> кожен продукт має термін придатності. Чим раніше — тим пріоритетніше використання.</p>
+          <p><b>Як працює:</b> при додаванні партії ви вказуєте дату. Система автоматично:</p>
+          <ul><li>Сортує партії за датою (найближчий термін — першим)</li>
+<li>Попереджає за 3 дні до закінчення</li>
+<li>Позначає прострочені партії червоним</li></ul>
+          <p><b>Практика:</b> відкрийте вкладку "Партії" — там усі терміни відсортовані.</p>`
+      },
+      scanner: {
+        title: '📷 Сканер штрихкодів',
+        body: `
+          <p><b>Принцип:</b> штрихкод унікально ідентифікує товар. Сканування швидше за ручний ввід.</p>
+          <p><b>Як працює:</b></p>
+          <ul><li>Натисніть "Увімкнути камеру" у вкладці "Сканер"</li>
+<li>Наведіть камеру на штрихкод (EAN-13, UPC, Code-128, QR)</li>
+<li>Якщо товар відомий — він з'явиться автоматично</li>
+<li>Якщо новий — система запропонує додати</li></ul>
+          <p><b>OCR-режим:</b> якщо доступний, можна зчитувати текст з етикеток (терміни, дати).</p>`
+      },
+      shopping: {
+        title: '🛒 Список покупок',
+        body: `
+          <p><b>Принцип:</b> не купуй те, що вже є. Не забудь те, що закінчується.</p>
+          <p><b>Автогенерація:</b></p>
+          <ul><li><b>З низького залишку</b> — товари, де stock < minStock</li>
+<li><b>З рецепта</b> — інгредієнти, яких не вистачає для обраного рецепта</li></ul>
+          <p><b>Ручне додавання:</b> у вкладці "Запаси" натисніть 🛒 біля товару.</p>
+          <p><b>Галочка</b> — відмітьте куплене. "Очистити куплені" — прибрати зі списку.</p>`
+      },
+      recipes: {
+        title: '🧾 Рецепти',
+        body: `
+          <p><b>Принцип:</b> рецепт = інгредієнти + інструкція. Система знає, чого не вистачає.</p>
+          <p><b>Як додати:</b> вкладка "Рецепти" → "Додати рецепт". Вкажіть назву, порції, інгредієнти з кількостями.</p>
+          <p><b>Зв'язок зі списком покупок:</b> оберіть рецепт у вкладці "Покупки" → система додає те, чого не вистачає.</p>`
+      },
+      sync: {
+        title: '🔄 Синхронізація',
+        body: `
+          <p><b>Принцип:</b> LifeStock працює повністю офлайн. Дані зберігаються в localStorage браузера.</p>
+          <p><b>Експорт:</b> Налаштування → "Експорт даних" — завантажить JSON файл з усіма даними.</p>
+          <p><b>Імпорт:</b> Налаштування → "Імпорт даних" — відновить з JSON файлу.</p>
+          <p><b>Синхронізація:</b> натисніть "🔄 Синхр." — система спробує синхронізувати (поки працює локально).</p>`
+      },
+      security: {
+        title: '🔐 Ролі та доступ',
+        body: `
+          <p><b>Принцип:</b> різні користувачі мають різні права.</p>
+          <p><b>Ролі:</b></p>
+          <ul><li><b>Адміністратор</b> — повний доступ: додавання, видалення, налаштування</li>
+<li><b>Працівник</b> — додавання партій, сканування, списки покупок</li>
+<li><b>Гість</b> — лише перегляд</li></ul>
+          <p><b>Зміна ролі:</b> Налаштування → оберіть користувача.</p>`
+      }
+    };
+    const t = topics[topic];
+    if (!t) return;
+    document.getElementById('lsHelpContent').innerHTML = `
+      <div class="ls-help-topic">
+        <h3>${t.title}</h3>
+        ${t.body}
+        <button class="ls-btn-ghost" onclick="App.closeHelpTopic()">← Назад</button>
+      </div>
+    `;
+    document.getElementById('lsHelpContent').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function closeHelpTopic() {
+    document.getElementById('lsHelpContent').innerHTML = '';
+  }
+
   // ===== SCAN TAB =====
-  let scanMode = 'barcode'; // 'barcode' or 'ocr'
+  let scanMode = 'barcode';
 
   function renderScan() {
     const cam = mod('CameraAI');
@@ -202,418 +367,177 @@ const App = (function () {
             <button class="ls-btn-ghost" id="lsStopBtn" onclick="App.toggleCamera()" style="display:none">⏹ Зупинити</button>
           </div>
           <div class="ls-scan-status" id="lsScanStatus"></div>
-          <div class="ls-ocr-progress" id="lsOcrProgress" style="display:none">
-            <div class="ls-ocr-bar"><div class="ls-ocr-fill" id="lsOcrFill"></div></div>
-            <span id="lsOcrProgressText">Підготовка...</span>
-          </div>
         </div>
         <div class="ls-scan-controls">
           <div class="ls-scan-manual">
             <h4>📝 Ручний ввід</h4>
-            <div class="ls-scan-row">
-              <input type="text" id="lsBarcodeInput" placeholder="Введи штрихкод" class="ls-input" maxlength="13">
-              <button class="ls-btn-primary" onclick="App.doScan()">Пошук</button>
-            </div>
-            <button class="ls-btn-ghost ls-btn-sm" onclick="App.randomScan()">🎲 Випадковий штрихкод</button>
-            <p class="ls-scan-bt-hint">💡 Bluetooth-сканер працює автоматично — просто введи код у поле вище</p>
+            <input type="text" id="manualBarcode" placeholder="Введіть штрихкод..." class="ls-input" style="margin-bottom:8px">
+            <button class="ls-btn-primary" onclick="App.manualScan()">✓ Знайти</button>
+            <button class="ls-btn-ghost" onclick="App.randomScan()" style="margin-left:4px">🎲 Випадковий</button>
           </div>
-          <p class="ls-scan-note">💡 Штрихкоди та OCR працюють без AI — ядро 1.0 повністю автономне.</p>
-          <div id="lsScanHistory" class="ls-scan-history">
-            <h4>Історія сканувань</h4>
-            <div class="ls-empty">Порожньо</div>
+          <div class="ls-scan-manual" style="margin-top:12px">
+            <h4>🔗 Джерела даних</h4>
+            <p class="ls-scan-note">Open Food Facts — відкрита база продуктів</p>
+            <p class="ls-scan-note">QuaggaJS — локальне розпізнавання штрихкодів</p>
+            <p class="ls-scan-note">Tesseract.js — OCR (опціонально)</p>
           </div>
         </div>
       </div>
     `;
-    renderScanHistory();
   }
 
-  function switchScanMode(mode) {
-    const cam = mod('CameraAI');
-    if (cam.isCameraActive()) cam.stopLiveScan();
-    scanMode = mode;
-    const viewport = document.getElementById('lsScanViewport');
-    if (viewport) viewport.querySelectorAll('video, .ls-scan-frame, .ls-scan-pulse').forEach(el => el.remove());
-    const btn = document.getElementById('lsCameraBtn');
-    const ocrBtn = document.getElementById('lsOcrBtn');
-    const stopBtn = document.getElementById('lsStopBtn');
-    const placeholder = document.getElementById('lsScanPlaceholder');
-    const result = document.getElementById('lsScanResult');
-    const status = document.getElementById('lsScanStatus');
-    const progress = document.getElementById('lsOcrProgress');
-    if (btn) btn.style.display = '';
-    if (ocrBtn) ocrBtn.style.display = 'none';
-    if (stopBtn) stopBtn.style.display = 'none';
-    if (placeholder) placeholder.style.display = '';
-    if (result) result.style.display = 'none';
-    if (status) status.innerHTML = '';
-    if (progress) progress.style.display = 'none';
+  function switchScanMode(m) {
+    scanMode = m;
     renderScan();
   }
 
-  // Run OCR: capture frame and recognize text
-  function runOCR() {
-    const cam = mod('CameraAI');
-    const status = document.getElementById('lsScanStatus');
-    const progress = document.getElementById('lsOcrProgress');
-    const progressText = document.getElementById('lsOcrProgressText');
-    const fill = document.getElementById('lsOcrFill');
-    const ocrBtn = document.getElementById('lsOcrBtn');
-
-    if (!cam.isCameraActive()) { App.toast('⚠️ Спочатку увімкни камеру', 'warn'); return; }
-
-    if (ocrBtn) ocrBtn.disabled = true;
-    if (progress) progress.style.display = 'flex';
-    if (progressText) progressText.textContent = 'Запуск OCR...';
-    if (fill) fill.style.width = '10%';
-
-    cam.captureAndOCR(
-      (result) => {
-        if (progress) progress.style.display = 'none';
-        if (ocrBtn) ocrBtn.disabled = false;
-        displayOCRResult(result);
-      },
-      (err) => {
-        if (progress) progress.style.display = 'none';
-        if (ocrBtn) ocrBtn.disabled = false;
-        if (status) status.innerHTML = '<span class="ls-scan-error">❌ OCR помилка: ' + (err.message || '') + '</span>';
-        App.toast('❌ OCR не вдалося', 'error');
-      }
-    );
-  }
-
-  function displayOCRResult(result) {
-    const resultEl = document.getElementById('lsScanResult');
-    const status = document.getElementById('lsScanStatus');
-    const placeholder = document.getElementById('lsScanPlaceholder');
-
-    if (placeholder) placeholder.style.display = 'none';
-    if (resultEl) resultEl.style.display = 'block';
-
-    const dates = result.dates || [];
-    const expiry = result.expiryInfo || {};
-    const text = result.text || '';
-    const confidence = result.confidence ? Math.round(result.confidence) : 0;
-
-    let html = '<div class="ls-ocr-result">';
-
-    if (dates.length > 0) {
-      html += '<div class="ls-ocr-dates">';
-      html += '<h5>📅 Знайдені дати</h5>';
-      dates.forEach(function (d) {
-        html += '<div class="ls-ocr-date-item">' +
-          '<span class="ls-ocr-date">' + d.formatted + '</span>' +
-          '<button class="ls-btn-primary ls-btn-sm" onclick="App.useOCRDate(\''+ d.formatted + '\')">Використати</button>' +
-        '</div>';
-      });
-      html += '</div>';
-    }
-
-    if (expiry.hasExpiryKeywords) {
-      html += '<div class="ls-ocr-expiry-tags">' + expiry.keywords.map(function (k) { return '<span class="ls-ocr-tag">' + k + '</span>'; }).join('') + '</div>';
-    }
-
-    html += '<div class="ls-ocr-text-section">';
-    html += '<h5>📝 Розпізнаний текст</h5>';
-    html += '<pre class="ls-ocr-text">' + (text || 'Текст не знайдено') + '</pre>';
-    html += '<div class="ls-ocr-conf">Точність: ' + confidence + '%</div>';
-    html += '</div>';
-
-    html += '</div>';
-
-    if (resultEl) resultEl.innerHTML = html;
-    if (status) status.innerHTML = '<span class="ls-scan-detected">✅ OCR: ' + text.length + ' символів, ' + dates.length + ' дат</span>';
-    App.toast('✅ Текст зчитано: ' + dates.length + ' дат знайдено', 'ok');
-  }
-
-  function useOCRDate(dateStr) {
-    // Try to use this date as expiry date for a new batch
-    const input = prompt('Додати партію з терміном ' + dateStr + '?\nВведіть назву продукту:');
-    if (!input) return;
-    const ProductCore = mod('ProductCore');
-    const products = ProductCore.getAll();
-    let product = products.find(function (p) { return p.name.toLowerCase().includes(input.toLowerCase()); });
-    if (!product) {
-      product = ProductCore.add({ name: input, categoryId: 'cat-food', unit: 'шт', minStock: 1 });
-    }
-    const BatchManager = mod('BatchManager');
-    BatchManager.add({ productId: product.id, quantity: 1, expiryDate: dateStr });
-    App.toast('📦 Партію додано: ' + input + ' до ' + dateStr, 'ok');
-    refreshAll();
-  }
-
-  let scanHistory = [];
-  function renderScanHistory() {
-    const el = document.getElementById('lsScanHistory');
-    if (!el) return;
-    if (scanHistory.length === 0) {
-      el.innerHTML = '<h4>Історія сканувань</h4><div class="ls-empty">Порожньо</div>';
-      return;
-    }
-    el.innerHTML = '<h4>Історія сканувань</h4>' + scanHistory.map(s =>
-      `<div class="ls-history-item"><span>${s.icon}</span><span>${s.name}</span><span class="ls-history-code">${s.code}</span></div>`
-    ).join('');
-  }
-
-  function doScan() {
-    const code = document.getElementById('lsBarcodeInput').value.trim();
-    if (!code || code.length < 3) { App.toast('⚠️ Введи штрихкод (мінімум 3 символи)', 'warn'); return; }
-    performScan(code);
-  }
-
-  function randomScan() {
-    const code = mod('BarcodeRegistry').randomCode();
-    document.getElementById('lsBarcodeInput').value = code;
-    performScan(code);
-  }
-
-  // Toggle live camera scanning
   function toggleCamera() {
     const cam = mod('CameraAI');
     const btn = document.getElementById('lsCameraBtn');
-    const ocrBtn = document.getElementById('lsOcrBtn');
     const stopBtn = document.getElementById('lsStopBtn');
-    const placeholder = document.getElementById('lsScanPlaceholder');
-    const result = document.getElementById('lsScanResult');
-    const status = document.getElementById('lsScanStatus');
+    const ocrBtn = document.getElementById('lsOcrBtn');
+    const ph = document.getElementById('lsScanPlaceholder');
     const viewport = document.getElementById('lsScanViewport');
 
-    if (cam.isCameraActive()) {
-      cam.stopLiveScan();
-      if (viewport) viewport.querySelectorAll('video, .ls-scan-frame, .ls-scan-pulse').forEach(el => el.remove());
-      if (btn) btn.style.display = '';
-      if (ocrBtn) ocrBtn.style.display = 'none';
-      if (stopBtn) stopBtn.style.display = 'none';
-      if (placeholder) placeholder.style.display = '';
-      if (result) result.style.display = 'none';
-      if (status) status.innerHTML = '';
-      App.toast('📷 Камеру зупинено', 'info');
-      return;
-    }
-
-    if (placeholder) placeholder.style.display = 'none';
-    if (result) result.style.display = 'none';
-    if (status) status.innerHTML = '<span class="ls-scan-loading">🔄 Запуск камери...</span>';
-
-    if (viewport) {
-      var frame = document.createElement('div');
-      frame.className = 'ls-scan-frame';
-      viewport.appendChild(frame);
-      var pulse = document.createElement('div');
-      pulse.className = 'ls-scan-pulse';
-      viewport.appendChild(pulse);
-    }
-
-    if (scanMode === 'ocr') {
-      // OCR mode — camera only, no continuous scanning
-      cam.startLiveScan(
-        viewport, null,
-        (err) => {
-          if (viewport) viewport.querySelectorAll('.ls-scan-frame, .ls-scan-pulse').forEach(el => el.remove());
-          if (status) status.innerHTML = '<span class="ls-scan-error">❌ ' + (err.message || 'Камера недоступна') + '</span>';
-          if (placeholder) placeholder.style.display = '';
-          App.toast('❌ Камера недоступна', 'error');
-        },
-        true // useOCR = true
-      ).then(() => {
-        if (cam.isCameraActive()) {
-          if (btn) btn.style.display = 'none';
-          if (ocrBtn) ocrBtn.style.display = '';
-          if (stopBtn) stopBtn.style.display = '';
-          if (status) status.innerHTML = '<span class="ls-scan-live">🔴 Камера активна — наведи на текст і тисни "Зчитати"</span>';
-        }
+    if (cam.isActive()) {
+      cam.stop();
+      btn.textContent = '📷 Увімкнути камеру';
+      stopBtn.style.display = 'none';
+      ocrBtn.style.display = 'none';
+      ph.style.display = 'block';
+      viewport.querySelector('video')?.remove();
+    } else {
+      cam.start(viewport, (code) => {
+        document.getElementById('lsScanStatus').innerHTML = `<span class="ls-scan-ok">✓ Знайдено: ${code}</span>`;
+        handleScanResult(code);
       });
-      return;
+      btn.textContent = '📷 Камера активна';
+      stopBtn.style.display = 'inline-block';
+      if (scanMode === 'ocr' && cam.hasOCR()) ocrBtn.style.display = 'inline-block';
     }
-
-    // Barcode mode
-    const engine = cam.hasNativeDetector() ? 'BarcodeDetector API' : 'QuaggaJS';
-    console.log('[CameraAI] Scanning engine:', engine);
-
-    cam.startLiveScan(
-      viewport,
-      (code) => {
-        if (status) status.innerHTML = '<span class="ls-scan-detected">✅ Знайдено: ' + code + '</span>';
-        performScan(code);
-        setTimeout(() => {
-          if (cam.isCameraActive()) {
-            cam.stopLiveScan();
-            if (viewport) viewport.querySelectorAll('video, .ls-scan-frame, .ls-scan-pulse').forEach(el => el.remove());
-            if (btn) btn.style.display = '';
-            if (stopBtn) stopBtn.style.display = 'none';
-            if (placeholder) placeholder.style.display = '';
-          }
-        }, 2000);
-      },
-      (err) => {
-        if (viewport) viewport.querySelectorAll('.ls-scan-frame, .ls-scan-pulse').forEach(el => el.remove());
-        if (status) status.innerHTML = '<span class="ls-scan-error">❌ Камера недоступна. ' + (err.message || 'Дозволи не надано') + '</span>';
-        if (placeholder) placeholder.style.display = '';
-        App.toast('❌ Камера недоступна. Дозволи не надано?', 'error');
-      }
-    );
-
-    if (btn) btn.style.display = 'none';
-    if (stopBtn) stopBtn.style.display = '';
-    if (status) status.innerHTML = '<span class="ls-scan-live">🔴 Камера активна (' + engine + ') — наведи на штрихкод</span>';
   }
 
-  function performScan(code) {
-    const placeholder = document.getElementById('lsScanPlaceholder');
-    const result = document.getElementById('lsScanResult');
-    const status = document.getElementById('lsScanStatus');
-    if (placeholder) placeholder.style.display = 'none';
-    if (result) { result.style.display = 'none'; result.innerHTML = ''; }
-    if (status) status.innerHTML = '<span class="ls-scan-loading">🔍 Пошук товару...</span>';
-
-    // Use full lookup: local DB first, then OpenFoodFacts API
-    mod('BarcodeRegistry').lookupFull(code, function (res) {
-      if (status) status.innerHTML = '';
-
-      if (res.found) {
-        const p = res.product;
-        const sourceLabel = res.source === 'user' ? 'з бази' : res.source === 'registry' ? 'з реєстру' : res.source === 'OpenFoodFacts' ? 'з OpenFoodFacts' : 'знайдено';
-        if (result) {
-          result.style.display = 'block';
-          result.innerHTML = buildScanResultHTML(p, code, sourceLabel);
-        }
-        scanHistory.unshift({ icon: p.icon, name: p.name, code, manufacturer: p.manufacturer || '' });
-        if (scanHistory.length > 8) scanHistory.pop();
-        renderScanHistory();
-        App.toast('✅ Знайдено: ' + p.name, 'ok');
-      } else if (res.source === 'GS1' && res.country) {
-        // Only country detected from GS1 prefix
-        if (result) {
-          result.style.display = 'block';
-          result.innerHTML = `
-            <div class="ls-scan-product">
-              <div class="ls-scan-icon">🌐</div>
-              <div class="ls-scan-name">Країна: ${res.country}</div>
-              <div class="ls-scan-meta">Код: ${code} · виробник невідомий</div>
-              <button class="ls-btn-primary ls-btn-sm" style="margin-top:8px" onclick="App.addProductWithBarcode('${code}')">➕ Додати вручну</button>
-            </div>
-          `;
-        }
-        App.toast('🌐 Країна: ' + res.country + '. Товар не знайдено в базі.', 'warn');
-      } else {
-        if (result) {
-          result.style.display = 'block';
-          result.innerHTML = `
-            <div class="ls-scan-product">
-              <div class="ls-scan-icon">❓</div>
-              <div class="ls-scan-name">Невідомий товар</div>
-              <div class="ls-scan-meta">Код: ${code}</div>
-              <button class="ls-btn-primary ls-btn-sm" style="margin-top:8px" onclick="App.addProductWithBarcode('${code}')">➕ Додати вручну</button>
-            </div>
-          `;
-        }
-        App.toast('❓ Невідомий код: ' + code, 'warn');
-      }
-      refreshAll();
+  function runOCR() {
+    const cam = mod('CameraAI');
+    if (!cam.hasOCR()) { toast('OCR не доступний', 'warn'); return; }
+    document.getElementById('lsScanStatus').innerHTML = '<span>🔤 Аналіз тексту...</span>';
+    cam.runOCR((text) => {
+      document.getElementById('lsScanStatus').innerHTML = `<span class="ls-scan-ok">✓ Текст: ${text}</span>`;
     });
   }
 
-  function buildScanResultHTML(p, code, sourceLabel) {
-    var html = '<div class="ls-scan-product">';
-    if (p.imageUrl) {
-      html += '<img class="ls-scan-img" src="' + p.imageUrl + '" alt="' + p.name + '" onerror="this.style.display=\'none\'">';
-    } else {
-      html += '<div class="ls-scan-icon">' + (p.icon || '📦') + '</div>';
-    }
-    html += '<div class="ls-scan-name">' + p.name + '</div>';
-    html += '<div class="ls-scan-meta">' + (p.price || 0) + ' ₴ · ' + (p.unit || 'шт') + ' · ' + sourceLabel + '</div>';
-
-    // Manufacturer / brand / country block
-    var info = [];
-    if (p.manufacturer) info.push('🏭 ' + p.manufacturer);
-    if (p.brand && p.brand !== p.manufacturer) info.push('🏷️ ' + p.brand);
-    if (p.country) info.push('🌐 ' + p.country);
-    if (p.quantity) info.push('📦 ' + p.quantity);
-    if (p.nutritionGrade) info.push('📊 Nutri: ' + p.nutritionGrade.toUpperCase());
-    if (info.length > 0) {
-      html += '<div class="ls-scan-info">' + info.map(function (i) { return '<div>' + i + '</div>'; }).join('') + '</div>';
-    }
-
-    html += '<div class="ls-scan-actions">';
-    html += '<button class="ls-btn-primary ls-btn-sm" onclick="App.addBatch(\'' + p.id + '\')">📦 Додати партію</button>';
-    html += '</div>';
-    html += '</div>';
-    return html;
+  function manualScan() {
+    const code = document.getElementById('manualBarcode').value.trim();
+    if (!code) { toast('Введіть штрихкод', 'warn'); return; }
+    handleScanResult(code);
   }
 
-  function toggleAI(enabled) { /* AI not in core 1.0 */ }
+  function randomScan() {
+    const codes = ['4820000000017', '4820000000024', '5901234123457', '8004500123456'];
+    const code = codes[Math.floor(Math.random() * codes.length)];
+    document.getElementById('manualBarcode').value = code;
+    handleScanResult(code);
+  }
+
+  function doScan() { randomScan(); }
+
+  function handleScanResult(code) {
+    const registry = mod('BarcodeRegistry');
+    const existing = registry.lookup(code);
+    if (existing) {
+      toast(`✅ ${existing.name} (${code})`, 'ok');
+      addBatch(existing.productId);
+    } else {
+      toast(`🆕 Новий штрихкод: ${code}`, 'info');
+      addProductWithBarcode(code);
+    }
+  }
+
+  function useOCRDate(dateStr) {
+    toast(`📅 Дата з OCR: ${dateStr}`, 'info');
+  }
+
+  function toggleAI() {
+    const ai = LifeStock.store.get('ai-enabled', false);
+    LifeStock.store.set('ai-enabled', !ai);
+    toast(ai ? '🤖 AI вимкнено' : '🤖 AI увімкнено (якщо доступний)', 'info');
+    renderSettings();
+  }
 
   // ===== BATCHES TAB =====
   function renderBatches() {
-    const batches = mod('BatchManager').list();
-    const can = mod('Security').can('add');
+    const batches = LifeStock.store.get('batches', []).filter(b => !b.writeOff);
+    batches.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
 
-    let html = `
-      <div class="ls-toolbar">
-        <h3>📊 Партії товарів</h3>
-        ${can ? `<button class="ls-btn-primary" onclick="App.addBatch()">➕ Нова партія</button>` : ''}
-      </div>
-      <div class="ls-table-wrap">
-        <table class="ls-table">
-          <thead><tr><th>№ Партії</th><th>Товар</th><th>Кількість</th><th>Залишок</th><th>Склад</th><th>Термін</th><th>Дні</th><th>Статус</th></tr></thead>
-          <tbody>
-    `;
+    let html = '';
+    if (batches.length === 0) {
+      html = `<div class="ls-empty"><span class="ls-empty-icon">📊</span><p>Партій немає. Додайте через "Запаси" → 📦</p></div>`;
+    } else {
+      html = '<div class="ls-batch-list">';
+      batches.forEach(b => {
+        const p = mod('ProductCore').get(b.productId);
+        const loc = mod('StorageManager').get(b.storageId);
+        const days = Math.ceil((new Date(b.expiryDate) - new Date()) / 86400000);
+        let urgency = '';
+        if (days < 0) urgency = '<span class="ls-badge ls-badge-crit">❌ Прострочено</span>';
+        else if (days <= 3) urgency = '<span class="ls-badge ls-badge-crit">⏳ ' + days + ' дн.</span>';
+        else if (days <= 7) urgency = '<span class="ls-badge ls-badge-warn">⚠ ' + days + ' дн.</span>';
+        else urgency = '<span class="ls-badge ls-badge-ok">✔ ' + days + ' дн.</span>';
 
-    batches.forEach(b => {
-      const p = mod('ProductCore').get(b.productId);
-      const loc = mod('StorageManager').get(b.storageId);
-      const days = mod('BatchManager').daysUntilExpiry(b.id);
-      let dayClass = '';
-      if (days !== null) { if (days <= 1) dayClass = 'ls-cell-crit'; else if (days <= 3) dayClass = 'ls-cell-warn'; }
-      html += `<tr>
-        <td><code>${b.batchNumber}</code></td>
-        <td>${p ? p.icon + ' ' + p.name : '?'}</td>
-        <td>${b.quantity}</td>
-        <td><b>${b.remaining}</b></td>
-        <td>${loc ? loc.icon + ' ' + loc.name : '—'}</td>
-        <td>${b.expiryDate || '—'}</td>
-        <td class="${dayClass}">${days !== null ? days + ' дн.' : '—'}</td>
-        <td>${b.status === 'active' ? '<span class="ls-badge ls-badge-ok">✔ Активна</span>' : '<span class="ls-badge">Закінчена</span>'}</td>
-      </tr>`;
-    });
-
-    html += `</tbody></table></div>`;
+        html += `
+          <div class="ls-card ls-batch-card ${days < 0 ? 'expired' : days <= 3 ? 'critical' : ''}">
+            <div class="ls-batch-head">
+              <span class="ls-batch-icon">${p ? p.icon : '📦'}</span>
+              <div><b>${p ? p.name : 'Невідомо'}</b><br><small>${b.quantity} ${p ? p.unit : 'шт'}</small></div>
+              <div class="ls-batch-meta">📍 ${loc ? loc.name : '—'} | 📅 ${b.expiryDate}</div>
+            </div>
+            <div class="ls-batch-status">${urgency}</div>
+          </div>
+        `;
+      });
+      html += '</div>';
+    }
     document.getElementById('panel-batches').innerHTML = html;
   }
 
   // ===== RECIPES TAB =====
   function renderRecipes() {
-    const recipes = mod('RecipeEngine').list();
+    const recipes = LifeStock.store.get('recipes', []);
     const can = mod('Security').can('add');
-
-    let html = `
-      <div class="ls-toolbar">
-        <h3>🧾 Рецепти</h3>
-        ${can ? `<button class="ls-btn-primary" onclick="App.addRecipe()">➕ Новий рецепт</button>` : ''}
-      </div>
-      <div class="ls-recipe-grid">
-    `;
-
-    recipes.forEach(r => {
-      const availability = mod('RecipeEngine').checkAvailability(r.id, r.portions);
-      const allAvailable = availability.every(a => a.enough);
-      html += `<div class="ls-recipe-card">
-        <div class="ls-recipe-icon">${r.icon}</div>
-        <h4>${r.name}</h4>
-        <p class="ls-recipe-portions">🍽️ ${r.portions} порцій</p>
-        <div class="ls-recipe-ingredients">
-          ${availability.map(a => `<div class="ls-ingredient ${a.enough ? 'ok' : 'missing'}">
-            <span>${a.name}</span><span>${a.available}/${a.needed} ${a.unit} ${a.enough ? '✔' : '❌'}</span>
-          </div>`).join('')}
-        </div>
-        ${r.instructions ? `<p class="ls-recipe-instructions">${r.instructions}</p>` : ''}
-        <div class="ls-recipe-status ${allAvailable ? 'ok' : 'missing'}">
-          ${allAvailable ? '✅ Всі інгредієнти в наявності' : '⚠️ Не вистачає інгредієнтів'}
-        </div>
-      </div>`;
-    });
-
-    html += `</div>`;
+    let html = '';
+    if (recipes.length === 0) {
+      html = `<div class="ls-empty"><span class="ls-empty-icon">🧾</span><p>Рецептів немає</p>${can ? '<button class="ls-btn-primary" onclick="App.addRecipe()">➕ Додати рецепт</button>' : ''}</div>`;
+    } else {
+      html = `<div class="ls-toolbar">${can ? '<button class="ls-btn-primary" onclick="App.addRecipe()">➕ Додати рецепт</button>' : ''}</div>`;
+      html += '<div class="ls-recipe-grid">';
+      recipes.forEach(r => {
+        const canMake = r.ingredients.every(ing => {
+          const s = mod('InventoryEngine').getAllStock().find(x => x.productId === ing.productId);
+          return s && s.stock >= ing.quantity;
+        });
+        html += `
+          <div class="ls-card ls-recipe-card">
+            <div class="ls-recipe-head">
+              <span class="ls-recipe-icon">${r.icon || '🍽️'}</span>
+              <div><b>${r.name}</b><br><small>${r.portions} порцій</small></div>
+            </div>
+            <div class="ls-recipe-ings">
+              ${r.ingredients.map(ing => {
+                const s = mod('InventoryEngine').getAllStock().find(x => x.productId === ing.productId);
+                const have = s ? s.stock : 0;
+                const ok = have >= ing.quantity;
+                return `<div class="ls-recipe-ing ${ok ? '' : 'missing'}">${ok ? '✓' : '✗'} ${ing.name} — ${ing.quantity} ${ing.unit} <small>(${have})</small></div>`;
+              }).join('')}
+            </div>
+            ${r.instructions ? `<p class="ls-recipe-instr">${r.instructions}</p>` : ''}
+            <div class="ls-recipe-actions">
+              ${!canMake ? `<button class="ls-btn-ghost" onclick="App.addRecipeToShopping('${r.id}')">🛒 Додати недостаюче</button>` : '<span class="ls-badge ls-badge-ok">✔ Можна готувати</span>'}
+            </div>
+          </div>
+        `;
+      });
+      html += '</div>';
+    }
     document.getElementById('panel-recipes').innerHTML = html;
   }
 
@@ -621,237 +545,132 @@ const App = (function () {
   function renderStorage() {
     const locations = mod('StorageManager').list();
     const can = mod('Security').can('add');
-
-    let html = `
-      <div class="ls-toolbar">
-        <h3>🏬 Місця зберігання</h3>
-        ${can ? `<button class="ls-btn-primary" onclick="App.addStorage()">➕ Додати</button>` : ''}
-      </div>
-      <div class="ls-storage-grid">
-    `;
-
-    locations.forEach(loc => {
-      const items = mod('BatchManager').list({ storageId: loc.id, status: 'active' });
-      const tempAlert = loc.temp !== null && loc.maxTemp !== null && loc.temp > loc.maxTemp;
-      html += `<div class="ls-storage-card ${tempAlert ? 'alert' : ''}">
-        <div class="ls-storage-icon">${loc.icon}</div>
-        <h4>${loc.name}</h4>
-        <div class="ls-storage-temp ${tempAlert ? 'alert' : ''}">🌡️ ${loc.temp !== null ? loc.temp + '°C' : '—'} (норма: ${loc.maxTemp !== null ? '≤' + loc.maxTemp + '°C' : '—'})</div>
-        <div class="ls-storage-items">${items.length} партій активних</div>
-      </div>`;
-    });
-
-    html += `</div>`;
+    let html = '';
+    if (locations.length === 0) {
+      html = `<div class="ls-empty"><span class="ls-empty-icon">🏬</span><p>Складів немає</p>${can ? '<button class="ls-btn-primary" onclick="App.addStorage()">➕ Додати склад</button>' : ''}</div>`;
+    } else {
+      html = `<div class="ls-toolbar">${can ? '<button class="ls-btn-primary" onclick="App.addStorage()">➕ Додати склад</button>' : ''}</div>`;
+      html += '<div class="ls-storage-grid">';
+      locations.forEach(loc => {
+        const batches = LifeStock.store.get('batches', []).filter(b => b.storageId === loc.id && !b.writeOff);
+        html += `
+          <div class="ls-card ls-storage-card">
+            <div class="ls-storage-head">
+              <span class="ls-storage-icon">${loc.icon}</span>
+              <div><b>${loc.name}</b><br><small>${batches.length} партій</small></div>
+            </div>
+            ${loc.temp !== null && loc.temp !== undefined ? `<div class="ls-storage-temp">🌡 ${loc.temp}°C ${loc.maxTemp ? `(макс ${loc.maxTemp}°C)` : ''}</div>` : ''}
+          </div>
+        `;
+      });
+      html += '</div>';
+    }
     document.getElementById('panel-storage').innerHTML = html;
   }
 
   // ===== ALERTS TAB =====
   function renderAlerts() {
-    const notifs = mod('NotificationCenter').list();
-    const unread = notifs.filter(n => !n.read).length;
-
-    let html = `
-      <div class="ls-toolbar">
-        <h3>🔔 Сповіщення ${unread > 0 ? `<span class="ls-badge ls-badge-crit">${unread}</span>` : ''}</h3>
-        <button class="ls-btn-ghost ls-btn-sm" onclick="App.markAllRead()">✓ Прочитати всі</button>
-        <button class="ls-btn-ghost ls-btn-sm" onclick="App.clearAlerts()">🗑️ Очистити</button>
-      </div>
-      <div class="ls-alerts-list">
-    `;
-
-    if (notifs.length === 0) {
-      html += '<div class="ls-empty-big">🔕 Немає сповіщень</div>';
+    const alerts = LifeStock.store.get('notifications', []);
+    let html = '';
+    if (alerts.length === 0) {
+      html = `<div class="ls-empty"><span class="ls-empty-icon">🔔</span><p>Сповіщень немає</p></div>`;
     } else {
-      notifs.forEach(n => {
-        const sevClass = n.severity === 'critical' ? 'ls-alert-crit' : n.severity === 'warning' ? 'ls-alert-warn' : '';
-        html += `<div class="ls-alert ${sevClass} ${n.read ? 'read' : ''}" onclick="App.markRead('${n.id}')">
-          <div class="ls-alert-time">${new Date(n.createdAt).toLocaleString('uk-UA')}</div>
-          <div class="ls-alert-title">${n.title}</div>
-          <div class="ls-alert-msg">${n.message}</div>
-        </div>`;
+      html = '<div class="ls-alerts-list">';
+      alerts.slice().reverse().forEach(a => {
+        html += `
+          <div class="ls-alert ${a.read ? '' : 'unread'}">
+            <span class="ls-alert-icon">${a.icon || '🔔'}</span>
+            <div class="ls-alert-body">
+              <div class="ls-alert-title">${a.title}</div>
+              <div class="ls-alert-msg">${a.message}</div>
+              <div class="ls-alert-time">${a.timestamp || ''}</div>
+            </div>
+            ${!a.read ? `<button class="ls-btn-sm" onclick="App.markRead('${a.id}')">✓</button>` : ''}
+          </div>
+        `;
       });
+      html += '</div>';
+      html += `<div class="ls-toolbar" style="margin-top:12px"><button class="ls-btn-ghost" onclick="App.markAllRead()">✓ Прочитати всі</button><button class="ls-btn-danger" onclick="App.clearAlerts()">🗑️ Очистити</button></div>`;
     }
-
-    html += `</div>`;
     document.getElementById('panel-alerts').innerHTML = html;
   }
 
   // ===== SETTINGS TAB =====
-
   function renderSettings() {
     const sec = mod('Security');
-    const sync = mod('SyncManager');
     const user = sec.getCurrentUser();
-    const role = sec.getRole();
-    const auditLog = sec.getAuditLog();
-    const syncStatus = sync.getStatus();
-    const cats = mod('ProductCore').getCategories();
-    const units = mod('ProductCore').getUnits();
-    const storage = mod('StorageManager');
-    const locations = storage.list();
-    const notifs = mod('NotificationCenter');
+    const can = sec.can('manage');
+    const ai = LifeStock.store.get('ai-enabled', false);
 
-    // Get inventory stats for data section
-    const inv = mod('InventoryEngine');
-    const stats = inv.getStats();
-    const products = mod('ProductCore').list();
-    const batches = mod('BatchManager').list();
-    const recipes = mod('RecipeEngine').list();
-
-    document.getElementById('panel-settings').innerHTML = `
-      <div class="ls-settings">
-
-        <!-- User / Role section -->
-        <div class="ls-settings-section">
-          <h3>👤 Користувач</h3>
-          <div class="ls-settings-row">
-            <div class="ls-settings-label">
-              <b>${user ? user.name : 'Гість'}</b><br>
-              <small>Роль: ${role === 'admin' ? 'Адміністратор' : role === 'manager' ? 'Менеджер' : 'Гість'}</small>
-            </div>
-            <div class="ls-settings-desc">У поточній версії користувач: <b>${user ? user.name : '—'}</b></div>
-          </div>
-          <div class="ls-settings-audit">
-            <details>
-              <summary>📋 Журнал дій (${auditLog.length})</summary>
-              <div class="ls-audit-log">
-                ${auditLog.length === 0 ? '<div class="ls-empty">Журнал порожній</div>' :
-                  auditLog.slice(-20).reverse().map(a => `
-                    <div class="ls-audit-entry">
-                      <span class="ls-audit-time">${new Date(a.timestamp).toLocaleString('uk-UA')}</span>
-                      <span class="ls-audit-action">${a.action}</span>
-                      <span class="ls-audit-detail">${a.detail || ''}</span>
-                    </div>
-                  `).join('')}
-                }
-              </div>
-            </details>
-          </div>
+    let html = `
+      <div class="ls-user-card">
+        <div class="ls-user-avatar">${user ? user.name[0] : 'G'}</div>
+        <div class="ls-user-info">
+          <h4>${user ? user.name : 'Гість'}</h4>
+          <p>Роль: ${sec.getRole()}</p>
         </div>
-
-        <!-- Data overview -->
-        <div class="ls-settings-section">
-          <h3>📊 Дані системи</h3>
-          <div class="ls-data-grid">
-            <div class="ls-data-card">
-              <span class="ls-data-num">${products.length}</span>
-              <span class="ls-data-lbl">Товарів</span>
-            </div>
-            <div class="ls-data-card">
-              <span class="ls-data-num">${batches.length}</span>
-              <span class="ls-data-lbl">Партій</span>
-            </div>
-            <div class="ls-data-card">
-              <span class="ls-data-num">${recipes.length}</span>
-              <span class="ls-data-lbl">Рецептів</span>
-            </div>
-            <div class="ls-data-card">
-              <span class="ls-data-num">${locations.length}</span>
-              <span class="ls-data-lbl">Локацій</span>
-            </div>
-            <div class="ls-data-card">
-              <span class="ls-data-num">${notifs.list().length}</span>
-              <span class="ls-data-lbl">Сповіщень</span>
-            </div>
-            <div class="ls-data-card">
-              <span class="ls-data-num">${stats.totalValue.toFixed(2)}</span>
-              <span class="ls-data-lbl">₴ Вартість</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Sync status -->
-        <div class="ls-settings-section">
-          <h3>🔄 Синхронізація</h3>
-          <div class="ls-settings-row">
-            <div class="ls-settings-label">
-              Статус: <b style="color:${syncStatus.online ? '#22c55e' : '#f59e0b'}">
-                ${syncStatus.online ? '🟢 Онлайн' : '🟡 Офлайн'}
-              </b>
-            </div>
-            <div class="ls-settings-desc">
-              ${syncStatus.lastSync ? 'Остання синхр.: ' + new Date(syncStatus.lastSync).toLocaleString('uk-UA') : 'Синхронізація не виконувалась'}
-            </div>
-          </div>
-          <button class="ls-btn-primary ls-btn-sm" onclick="App.syncNow()">🔄 Синхронізувати</button>
-        </div>
-
-        <!-- Backup / Export / Import -->
-        <div class="ls-settings-section">
-          <h3>💾 Резервне копіювання</h3>
-          <div class="ls-backup-buttons">
-            <button class="ls-btn-primary" onclick="App.exportData()">📥 Експорт даних (JSON)</button>
-            <label class="ls-btn-ghost" style="cursor:pointer">
-              📤 Імпорт даних
-              <input type="file" accept=".json" style="display:none" onchange="App.importData(this.files[0])" />
-            </label>
-          </div>
-          <div class="ls-settings-desc">
-            <small>Експорт зберігає всі дані (товари, партії, рецепти, локації) у JSON файл.</small>
-          </div>
-        </div>
-
-        <!-- Categories management -->
-        <div class="ls-settings-section">
-          <h3>🏷️ Категорії товарів</h3>
-          <div class="ls-cat-list">
-            ${cats.map(c => `
-              <div class="ls-cat-item">
-                <span class="ls-cat-icon">${c.icon}</span>
-                <span class="ls-cat-name">${c.name}</span>
-                <span class="ls-cat-count">${products.filter(p => p.categoryId === c.id).length} тов.</span>
-              </div>
-            `).join('')}
-          </div>
-          <button class="ls-btn-ghost ls-btn-sm" onclick="App.addCategory()">➕ Додати категорію</button>
-        </div>
-
-        <!-- Units list -->
-        <div class="ls-settings-section">
-          <h3>📏 Одиниці вимірювання</h3>
-          <div class="ls-units-list">
-            ${units.map(u => `<span class="ls-unit-chip">${u}</span>`).join('')}
-          </div>
-        </div>
-
-        <!-- Storage locations -->
-        <div class="ls-settings-section">
-          <h3>🏪 Локації зберігання</h3>
-          <div class="ls-loc-list">
-            ${locations.map(l => `
-              <div class="ls-loc-item">
-                <span class="ls-loc-icon">${l.icon}</span>
-                <span class="ls-loc-name">${l.name}</span>
-                <span class="ls-loc-temp">${l.temp !== null ? l.temp + '°C' : '—'}</span>
-              </div>
-            `).join('')}
-          </div>
-          <button class="ls-btn-ghost ls-btn-sm" onclick="App.addStorageLocation()">➕ Додати локацію</button>
-        </div>
-
-        <!-- Danger zone -->
-        <div class="ls-settings-section ls-danger-zone">
-          <h3>⚠️ Небезпечна зона</h3>
-          <div class="ls-danger-buttons">
-            <button class="ls-btn-danger" onclick="App.clearAllData()">🗑️ Очистити всі дані</button>
-          </div>
-          <div class="ls-settings-desc">
-            <small>Видалить усі товари, партії, рецепти та налаштування. Дію не можна скасувати.</small>
-          </div>
-        </div>
-
-        <!-- About -->
-        <div class="ls-settings-section ls-about">
-          <h3>ℹ️ Про програму</h3>
-          <div class="ls-about-info">
-            <b>LifeStock Core</b> v1.0<br>
-            Офлайн-система управління запасами<br>
-            <small>10 модулів · Працює без інтернету · Дані у вашому браузері</small>
-          </div>
-        </div>
-
       </div>
     `;
+
+    html += `
+      <div class="ls-settings-group">
+        <h4>👤 Користувачі</h4>
+        ${sec.listUsers().map(u => `
+          <div class="ls-settings-row">
+            <span>${u.name} (${u.role})</span>
+            <button class="ls-btn-sm" onclick="App.switchUser('${u.id}')">Перемкнути</button>
+          </div>
+        `).join('')}
+      </div>
+    `;
+
+    html += `
+      <div class="ls-settings-group">
+        <h4>📂 Категорії</h4>
+        ${mod('ProductCore').getCategories().map(c => `<div class="ls-settings-row"><span>${c.icon} ${c.name}</span></div>`).join('')}
+        ${can ? `<button class="ls-btn-ghost ls-mt-8" onclick="App.addCategory()">➕ Додати категорію</button>` : ''}
+      </div>
+    `;
+
+    html += `
+      <div class="ls-settings-group">
+        <h4>🏬 Місця зберігання</h4>
+        ${mod('StorageManager').list().map(l => `<div class="ls-settings-row"><span>${l.icon} ${l.name}</span></div>`).join('')}
+        ${can ? `<button class="ls-btn-ghost ls-mt-8" onclick="App.addStorageLocation()">➕ Додати місце</button>` : ''}
+      </div>
+    `;
+
+    html += `
+      <div class="ls-settings-group">
+        <h4>🤖 AI функції</h4>
+        <div class="ls-settings-row">
+          <span>AI помічник</span>
+          <button class="ls-btn-sm ${ai ? 'ls-btn-primary' : 'ls-btn-ghost'}" onclick="App.toggleAI()">${ai ? 'Увімкнено' : 'Вимкнено'}</button>
+        </div>
+        <p class="ls-settings-note">AI — опціональний шар. Усі основні функції працюють без AI та інтернету.</p>
+      </div>
+    `;
+
+    html += `
+      <div class="ls-settings-group">
+        <h4>💾 Дані</h4>
+        <div class="ls-settings-row"><button class="ls-btn-ghost" onclick="App.exportData()">⬇ Експорт даних</button></div>
+        <div class="ls-settings-row"><button class="ls-btn-ghost" onclick="App.importData()">⬆ Імпорт даних</button></div>
+        ${can ? `<div class="ls-settings-row"><button class="ls-btn-danger" onclick="App.clearAllData()">🗑️ Очистити всі дані</button></div>` : ''}
+      </div>
+    `;
+
+    html += `
+      <div class="ls-settings-group">
+        <h4>ℹ️ Про додаток</h4>
+        <div class="ls-settings-row"><span>Версія</span><b>1.1.0</b></div>
+        <div class="ls-settings-row"><span>Модулів</span><b>${LifeStock.getAll().length}</b></div>
+        <div class="ls-settings-row"><span>Режим</span><b>${mod('SyncManager').getStatus().online ? 'Онлайн' : 'Офлайн'}</b></div>
+        <div class="ls-settings-row"><span>Ліцензія</span><b>MIT</b></div>
+      </div>
+    `;
+
+    document.getElementById('panel-settings').innerHTML = html;
   }
 
   // ===== ACTIONS =====
@@ -866,10 +685,9 @@ const App = (function () {
     const barcode = prompt('Штрихкод (опціонально):', '') || '';
     const minStock = parseInt(prompt('Мінімальний залишок:', '1')) || 0;
     const price = parseFloat(prompt('Ціна (₴):', '0')) || 0;
-
     mod('ProductCore').add({ name, categoryId: category.id, unit, barcode, minStock, price, icon: '📦' });
     mod('Security').log('add-product', `Додано товар: ${name}`);
-    App.toast(`✅ Товар "${name}" додано`, 'ok');
+    toast(`✅ Товар "${name}" додано`, 'ok');
     refreshAll();
   }
 
@@ -879,7 +697,7 @@ const App = (function () {
     const unit = prompt('Одиниця (шт, кг, г, л, мл):', 'шт') || 'шт';
     const price = parseFloat(prompt('Ціна (₴):', '0')) || 0;
     mod('ProductCore').add({ name, barcode: code, unit, price, icon: '📦' });
-    App.toast(`✅ Товар "${name}" додано`, 'ok');
+    toast(`✅ Товар "${name}" додано`, 'ok');
     refreshAll();
   }
 
@@ -899,10 +717,9 @@ const App = (function () {
     const locStr = locations.map((l, i) => `${i + 1}. ${l.icon} ${l.name}`).join('\n');
     const locIdx = parseInt(prompt(`Склад:\n${locStr}`, '1')) - 1;
     const storageId = locations[locIdx]?.id;
-
     mod('BatchManager').add({ productId, quantity, storageId, expiryDate: expiry });
     mod('Security').log('add-batch', `Партія для: ${p.name}, к-ть: ${quantity}`);
-    App.toast(`📦 Партію додано: ${p.name}`, 'ok');
+    toast(`📦 Партію додано: ${p.name}`, 'ok');
     refreshAll();
   }
 
@@ -911,8 +728,6 @@ const App = (function () {
     if (!name) return;
     const portions = parseInt(prompt('Кількість порцій:', '2')) || 2;
     const instructions = prompt('Інструкція:', '') || '';
-
-    // Pick ingredients
     const products = mod('ProductCore').list();
     const ingredients = [];
     let adding = true;
@@ -926,9 +741,8 @@ const App = (function () {
       if (isNaN(qty)) continue;
       ingredients.push({ productId: p.id, name: p.name, quantity: qty, unit: p.unit });
     }
-
     mod('RecipeEngine').add({ name, portions, ingredients, instructions, icon: '🍽️' });
-    App.toast(`🧾 Рецепт "${name}" додано`, 'ok');
+    toast(`🧾 Рецепт "${name}" додано`, 'ok');
     refreshAll();
   }
 
@@ -939,8 +753,74 @@ const App = (function () {
     const temp = parseFloat(prompt('Температура °C (порожньо = не відстежувати):', ''));
     const maxTemp = isNaN(temp) ? null : parseFloat(prompt('Макс. температура °C:', (temp + 3).toString()));
     mod('StorageManager').add({ name, icon, temp: isNaN(temp) ? null : temp, maxTemp });
-    App.toast(`🏬 "${name}" додано`, 'ok');
+    toast(`🏬 "${name}" додано`, 'ok');
     refreshAll();
+  }
+
+  // ===== SHOPPING ACTIONS =====
+  function addToShopping(productId) {
+    const p = mod('ProductCore').get(productId);
+    const qty = parseFloat(prompt(`Кількість ${p.name} (${p.unit}):`, '1'));
+    if (isNaN(qty)) return;
+    mod('ShoppingList').addItem(productId, qty, '');
+    toast(`🛒 ${p.name} додано до списку`, 'ok');
+    renderStats();
+  }
+
+  function newList() {
+    const name = prompt('Назва списку:', 'Новий список');
+    if (!name) return;
+    mod('ShoppingList').add({ name, icon: '🛒', items: [] });
+    toast(`🛒 Список "${name}" створено`, 'ok');
+    renderShopping();
+    renderStats();
+  }
+
+  function switchList(id) {
+    mod('ShoppingList').setActive(id);
+    renderShopping();
+  }
+
+  function genFromLowStock() {
+    const res = mod('ShoppingList').generateFromLowStock();
+    toast(res.added > 0 ? `📊 ${res.added} товарів додано з низького залишку` : '📊 Усе в нормі, нічого не потрібно', res.added > 0 ? 'ok' : 'info');
+    renderShopping();
+    renderStats();
+  }
+
+  function genFromRecipe() {
+    const select = document.getElementById('shopRecipeSelect');
+    if (!select) return;
+    const recipeId = select.value;
+    if (!recipeId) { toast('Оберіть рецепт', 'warn'); return; }
+    const res = mod('ShoppingList').generateFromRecipe(recipeId);
+    toast(res.added > 0 ? `🧾 ${res.added} інгредієнтів додано` : '🧾 Усе є в наявності', res.added > 0 ? 'ok' : 'info');
+    renderShopping();
+    renderStats();
+  }
+
+  function toggleShopItem(productId) {
+    mod('ShoppingList').toggleItem(productId);
+    renderShopping();
+    renderStats();
+  }
+
+  function removeShopItem(productId) {
+    mod('ShoppingList').removeItem(productId);
+    renderShopping();
+    renderStats();
+  }
+
+  function clearCheckedItems() {
+    mod('ShoppingList').clearChecked();
+    renderShopping();
+    renderStats();
+  }
+
+  function addRecipeToShopping(recipeId) {
+    const res = mod('ShoppingList').generateFromRecipe(recipeId);
+    toast(res.added > 0 ? `🛒 ${res.added} додано до списку покупок` : 'Усе є в наявності', res.added > 0 ? 'ok' : 'info');
+    renderStats();
   }
 
   function markRead(id) { mod('NotificationCenter').markRead(id); renderAlerts(); renderSyncBar(); }
@@ -949,22 +829,24 @@ const App = (function () {
 
   function syncNow() {
     const res = mod('SyncManager').attemptSync();
-    if (res.success) { App.toast('🔄 Синхронізовано', 'ok'); mod('Security').log('sync', 'Ручна синхронізація'); }
-    else { App.toast('🔴 Офлайн — дані збережено локально', 'warn'); }
+    if (res.success) { toast('🔄 Синхронізовано', 'ok'); mod('Security').log('sync', 'Ручна синхронізація'); }
+    else { toast('🔴 Офлайн — дані збережено локально', 'warn'); }
     renderSyncBar();
   }
 
-  function switchUser(id) { mod('Security').login(id); App.toast('👤 Роль змінено', 'info'); refreshAll(); }
+  function switchUser(id) { mod('Security').login(id); toast('👤 Роль змінено', 'info'); refreshAll(); }
 
   function exportData() {
     const data = mod('SyncManager').exportData();
+    // Include shopping lists
+    data.data.shoppingLists = LifeStock.store.get('shopping-lists', []);
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = `lifestock-export-${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     mod('Security').log('export', 'Експорт даних');
-    App.toast('⬇ Дані експортовано', 'ok');
+    toast('⬇ Дані експортовано', 'ok');
   }
 
   function importData() {
@@ -977,8 +859,8 @@ const App = (function () {
       const reader = new FileReader();
       reader.onload = (ev) => {
         const res = mod('SyncManager').importData(ev.target.result);
-        if (res.success) { App.toast('⬆ Дані імпортовано', 'ok'); refreshAll(); }
-        else { App.toast('❌ Помилка: ' + res.error, 'error'); }
+        if (res.success) { toast('⬆ Дані імпортовано', 'ok'); refreshAll(); }
+        else { toast('❌ Помилка: ' + res.error, 'error'); }
       };
       reader.readAsText(file);
     };
@@ -1013,7 +895,7 @@ const App = (function () {
     const icon = prompt('Іконка (emoji):', '📦') || '📦';
     mod('ProductCore').addCategory(name, icon);
     mod('Security').log('add-category', 'Додано категорію: ' + name);
-    App.toast('✅ Категорію додано', 'ok');
+    toast('✅ Категорію додано', 'ok');
     renderSettings();
   }
 
@@ -1025,20 +907,19 @@ const App = (function () {
     const temp = tempStr !== '' ? parseFloat(tempStr) : null;
     mod('StorageManager').add({ name, icon, temp: temp });
     mod('Security').log('add-storage', 'Додано локацію: ' + name);
-    App.toast('✅ Локацію додано', 'ok');
+    toast('✅ Локацію додано', 'ok');
     renderSettings();
   }
 
   function clearAllData() {
-    if (!confirm('⚠️ УВага! Це видалить ВСІ дані (товари, партії, рецепти). Продовжити?')) return;
+    if (!confirm('⚠️ УВага! Це видалить ВСІ дані (товари, партії, рецепти, списки покупок). Продовжити?')) return;
     if (!confirm('Останнє підтвердження. Дію НЕ можна скасувати. Видалити все?')) return;
     LifeStock.store.clear();
-    App.toast('🗑️ Усі дані видалено', 'warn');
+    toast('🗑️ Усі дані видалено', 'warn');
     setTimeout(() => location.reload(), 1000);
   }
 
   function bindEvents() {
-    // Auto-refresh on data changes
     LifeStock.on('product:added', () => refreshAll());
     LifeStock.on('product:updated', () => refreshAll());
     LifeStock.on('product:removed', () => refreshAll());
@@ -1046,13 +927,16 @@ const App = (function () {
     LifeStock.on('batch:writeoff', () => refreshAll());
     LifeStock.on('sync:complete', () => renderSyncBar());
     LifeStock.on('notification:created', () => renderStats());
+    LifeStock.on('shopping:item-added', () => { renderStats(); });
   }
 
   return { init, addProduct, addProductWithBarcode, addBatch, addRecipe, addStorage,
-    doScan, randomScan, toggleCamera, switchScanMode, runOCR, useOCRDate, toggleAI, markRead, markAllRead, clearAlerts, syncNow,
-    switchUser, exportData, importData, resetData, toast,
-    renderSettings, addCategory, addStorageLocation, clearAllData };
+    doScan, randomScan, toggleCamera, switchScanMode, runOCR, useOCRDate, toggleAI,
+    markRead, markAllRead, clearAlerts, syncNow, switchUser, exportData, importData, resetData, toast,
+    renderSettings, addCategory, addStorageLocation, clearAllData,
+    addToShopping, newList, switchList, genFromLowStock, genFromRecipe,
+    toggleShopItem, removeShopItem, clearCheckedItems, addRecipeToShopping,
+    showHelpTopic, closeHelpTopic };
 })();
 
-// Bootstrap after all scripts loaded
 document.addEventListener('DOMContentLoaded', () => App.init());

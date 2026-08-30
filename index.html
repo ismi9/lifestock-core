@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LifeStock Ядро 1.0 — Жива демонстрація</title>
-    <meta name="description" content="LifeStock — робочий додаток управління запасами. 10 модулів працюють у браузері офлайн.">
+    <title>LifeStock Ядро 1.1 — Управління запасами</title>
+    <meta name="description" content="LifeStock — робочий додаток управління запасами. 10+ модулів працюють у браузері офлайн.">
     <link rel="icon" href="favicon.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,7 +18,7 @@
     <div class="container header-inner">
         <a href="#top" class="logo">
             <span class="logo-mark">📦</span> Life<span class="logo-accent">Stock</span>
-            <span class="logo-version">1.0</span>
+            <span class="logo-version">1.1</span>
         </a>
         <nav class="nav" id="nav">
             <a href="#top" class="nav-link active">Запаси</a>
@@ -58,28 +58,17 @@
                 <p>Швидкі питання</p>
                 <a href="https://t.me/ismi9" class="contact-link">@ismi9</a>
             </div>
+            <div class="contact-card">
+                <span class="contact-icon">📚</span>
+                <h4>Документація</h4>
+                <p>Специфікація та архітектура</p>
+                <a href="https://github.com/ismi9/lifestock-core#readme" class="contact-link">README</a>
+            </div>
         </div>
     </div>
 </section>
 
-<!-- ===== FOOTER ===== -->
-<footer class="footer">
-    <div class="container">
-        <div class="footer-inner">
-            <div class="footer-brand">
-                <span class="logo-mark">📦</span> Life<span class="logo-accent">Stock</span>
-                <span class="footer-version">Ядро 1.0</span>
-            </div>
-            <div class="footer-links">
-                <a href="#demo">Демонстрація</a>
-                <a href="#contact">Контакти</a>
-            </div>
-        </div>
-        <div class="footer-copy">© 2026 LifeStock · MIT License</div>
-    </div>
-</footer>
-
-<!-- ===== SCRIPTS ===== -->
+<!-- ===== Scripts ===== -->
 <script src="js/lib/quagga.min.js"></script>
 <script src="js/lib/tesseract/tesseract.min.js"></script>
 <script src="js/core/lifestock.js"></script>
@@ -94,48 +83,8 @@
 <script src="js/core/notification.js"></script>
 <script src="js/core/security.js"></script>
 <script src="js/core/sync.js"></script>
+<script src="js/core/shopping.js"></script>
 <script src="js/app.js"></script>
-<script>
-(function () {
-  // Mobile nav toggle
-  var navToggle = document.getElementById('navToggle');
-  var nav = document.getElementById('nav');
-  if (navToggle) {
-    navToggle.addEventListener('click', function () {
-      nav.classList.toggle('open');
-      navToggle.classList.toggle('open');
-    });
-  }
-  document.querySelectorAll('.nav-link').forEach(function (link) {
-    link.addEventListener('click', function () {
-      nav.classList.remove('open');
-      navToggle.classList.remove('open');
-    });
-  });
-  // Header shadow
-  var header = document.querySelector('.header');
-  window.addEventListener('scroll', function () {
-    if (window.scrollY > 10) header.classList.add('scrolled');
-    else header.classList.remove('scrolled');
-  });
-  // Active nav spy
-  var sections = document.querySelectorAll('section[id], header[id]');
-  var navLinks = document.querySelectorAll('.nav-link');
-  function updateActive() {
-    var pos = window.scrollY + 80;
-    var current = 'top';
-    sections.forEach(function (sec) {
-      if (pos >= sec.offsetTop) current = sec.id;
-    });
-    navLinks.forEach(function (l) {
-      l.classList.remove('active');
-      if (l.getAttribute('href') === '#' + current || (current === 'top' && l.getAttribute('href') === '#top')) {
-        l.classList.add('active');
-      }
-    });
-  }
-  window.addEventListener('scroll', updateActive);
-})();
-</script>
+
 </body>
 </html>
