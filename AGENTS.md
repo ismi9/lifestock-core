@@ -52,6 +52,16 @@ Official MCP server for browser automation via Model Context Protocol.
 3. `cli.js` / `index.js` — server entry points
 4. Use for: E2E testing, supplier scraping, visual regression, form automation
 
+## Learning System
+
+Path: `.learn-system/` — AI learning methodology from amosblomqvist/learn (852 stars).
+Adapted for LifeStock user education and onboarding.
+1. `skills/teach.md` — teaching philosophy: unconditional truths first + discovery-based learning
+2. `skills/visualize.md` — when to add diagrams (expiry timelines, inventory flow, architecture)
+3. `agents/researcher.md` — isolated fact-checker that verifies before stating facts
+4. `extensions/quiz.md` — interactive quizzes with construction rules for even options
+Use when: explaining features to users, onboarding, fact-checking product info
+
 ## Project Rules
 
 - Core does NOT depend on AI — all critical functions work offline
