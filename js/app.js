@@ -615,7 +615,7 @@ const App = (function () {
     html += `
       <div class="ls-settings-group">
         <h4>👤 Користувачі</h4>
-        ${sec.listUsers().map(u => `
+        ${sec.getUsers().map(u => `
           <div class="ls-settings-row">
             <span>${u.name} (${u.role})</span>
             <button class="ls-btn-sm" onclick="App.switchUser('${u.id}')">Перемкнути</button>
