@@ -380,3 +380,6 @@ img{max-width:100%;display:block}
 .ls-sync-status.offline{color:#999}
 .ls-pending{color:#f57c00;font-size:.78rem}
 .ls-user{font-size:.78rem;color:#888}
+
+/* Camera video */
+.ls-scan-video{width:100%;height:100%;object-fit:cover;border-radius:10px}

@@ -399,18 +399,22 @@ const App = (function () {
     const ph = document.getElementById('lsScanPlaceholder');
     const viewport = document.getElementById('lsScanViewport');
 
-    if (cam.isActive()) {
-      cam.stop();
+    if (cam.isCameraActive()) {
+      cam.stopLiveScan();
       btn.textContent = '📷 Увімкнути камеру';
       stopBtn.style.display = 'none';
       ocrBtn.style.display = 'none';
       ph.style.display = 'block';
       viewport.querySelector('video')?.remove();
     } else {
-      cam.start(viewport, (code) => {
+      cam.startLiveScan(viewport, (code) => {
         document.getElementById('lsScanStatus').innerHTML = `<span class="ls-scan-ok">✓ Знайдено: ${code}</span>`;
         handleScanResult(code);
-      });
+      }, (err) => {
+        document.getElementById('lsScanStatus').innerHTML = `<span style="color:#e74c3c">❌ ${err.message || err}</span>`;
+        toast('❌ Камера недоступна: ' + (err.message || err), 'error');
+        btn.textContent = '📷 Увімкнути камеру';
+      }, scanMode === 'ocr');
       btn.textContent = '📷 Камера активна';
       stopBtn.style.display = 'inline-block';
       if (scanMode === 'ocr' && cam.hasOCR()) ocrBtn.style.display = 'inline-block';
@@ -421,8 +425,21 @@ const App = (function () {
     const cam = mod('CameraAI');
     if (!cam.hasOCR()) { toast('OCR не доступний', 'warn'); return; }
     document.getElementById('lsScanStatus').innerHTML = '<span>🔤 Аналіз тексту...</span>';
-    cam.runOCR((text) => {
-      document.getElementById('lsScanStatus').innerHTML = `<span class="ls-scan-ok">✓ Текст: ${text}</span>`;
+    cam.captureAndOCR((result) => {
+      const text = result.text || '';
+      const dates = result.dates || [];
+      let html = `<span class="ls-scan-ok">✓ Текст: ${text}</span>`;
+      if (dates.length > 0) {
+        html += `<div style="margin-top:4px">📅 Дати: ${dates.map(d => d.formatted).join(', ')}</div>`;
+        if (dates.length > 0) {
+          const d = dates[0];
+          const isoDate = `${d.year}-${String(d.month).padStart(2,'0')}-${String(d.day).padStart(2,'0')}`;
+          html += `<button class="ls-btn-sm" style="margin-top:4px" onclick="App.useOCRDate('${isoDate}')">📅 Використати ${d.formatted}</button>`;
+        }
+      }
+      document.getElementById('lsScanStatus').innerHTML = html;
+    }, (err) => {
+      document.getElementById('lsScanStatus').innerHTML = `<span style="color:#e74c3c">❌ OCR: ${err.message || err}</span>`;
     });
   }
 
